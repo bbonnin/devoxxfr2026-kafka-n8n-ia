@@ -1,0 +1,5 @@
+[
+  {"fingerprint":"catalog:prod:app.error:/search","summary":"Timeouts sporadiques /search","resolution":"Ignore si error_rate < 1% et pas de slo_burn","action":"IGNORE"},
+  {"fingerprint":"payment:prod:slo.burn","summary":"Burn rate élevé checkout","resolution":"Créer ticket + alerter owner + vérifier dernier déploiement","action":"TICKET"},
+  {"fingerprint":"events-router:prod:consumer.lag","summary":"Lag runaway","resolution":"Scale consumer (allowlisted)","action":"REMEDIATE"}
+]

@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Ticket UI - Kanban</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: #0b1020; color: #e8ecff;}
+    header { padding: 14px 18px; border-bottom: 1px solid #222a4a; background: #0c1430; position: sticky; top:0;}
+    .wrap { display:flex; gap:14px; padding: 14px; }
+    .col { flex:1; background:#0f1938; border:1px solid #222a4a; border-radius:10px; overflow:hidden; min-height: 75vh;}
+    .col h2 { margin:0; padding: 10px 12px; font-size:14px; letter-spacing: .06em; text-transform: uppercase; background:#101c40; border-bottom:1px solid #222a4a;}
+    .lane { padding: 10px; display:flex; flex-direction:column; gap:10px; }
+    .card { background:#111f48; border:1px solid #2a3562; border-radius:10px; padding:10px; cursor:grab; }
+    .card:hover { border-color:#4a5db1; }
+    .meta { font-size:12px; opacity:.9; display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+    .pill { background:#182a61; border:1px solid #2a3a78; padding:2px 8px; border-radius:999px; }
+    .sev-P0 { background:#5a1020; border-color:#8a2038; }
+    .sev-P1 { background:#5a2a10; border-color:#8a4a20; }
+    .sev-P2 { background:#16305a; border-color:#2a4a8a; }
+    .sev-P3 { background:#163a2a; border-color:#2a6a4a; }
+    .drawer { width: 360px; background:#0f1938; border:1px solid #222a4a; border-radius:10px; padding:12px; }
+    .drawer h3 { margin: 0 0 8px 0; }
+    pre { white-space: pre-wrap; word-break: break-word; background:#0b1020; border:1px solid #222a4a; border-radius:8px; padding:10px; }
+    a { color:#9fb2ff; }
+    small { opacity:.8; }
+  </style>
+</head>
+<body>
+  {% from "_macros.html" import card %}
+
+<header>
+  <strong>Ticket UI</strong> <small>Kanban (TODO → IN_PROGRESS → DONE)</small>
+</header>
+
+<div class="wrap">
+  <div class="col" data-status="TODO" ondragover="allowDrop(event)" ondrop="onDrop(event,'TODO')">
+    <h2>TODO</h2>
+    <div class="lane">
+      {% for t in cols["TODO"] %}
+        {{ card(t) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col" data-status="IN_PROGRESS" ondragover="allowDrop(event)" ondrop="onDrop(event,'IN_PROGRESS')">
+    <h2>IN PROGRESS</h2>
+    <div class="lane">
+      {% for t in cols["IN_PROGRESS"] %}
+        {{ card(t) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col" data-status="DONE" ondragover="allowDrop(event)" ondrop="onDrop(event,'DONE')">
+    <h2>DONE</h2>
+    <div class="lane">
+      {% for t in cols["DONE"] %}
+        {{ card(t) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="drawer">
+    <h3 id="d_title">Select a ticket</h3>
+    <div id="d_meta"></div>
+    <h4>Description</h4>
+    <pre id="d_desc"></pre>
+    <h4>Comments</h4>
+    <div id="d_comments"></div>
+  </div>
+</div>
+
+<script>
+function allowDrop(ev){ ev.preventDefault(); }
+
+function onDragStart(ev, ticketId){
+  ev.dataTransfer.setData("ticketId", ticketId);
+}
+
+async function onDrop(ev, status){
+  ev.preventDefault();
+  const ticketId = ev.dataTransfer.getData("ticketId");
+  await fetch(`/api/tickets/${ticketId}`, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({status})
+  });
+  window.location.reload();
+}
+
+async function showTicket(ticketId){
+  const r = await fetch(`/api/tickets/${ticketId}`);
+  const data = await r.json();
+  const t = data.ticket;
+  document.getElementById('d_title').innerText = `${t.key} — ${t.title}`;
+  document.getElementById('d_desc').innerText = t.description;
+
+  const meta = [
+    `Service: ${t.service}`,
+    `Env: ${t.env}`,
+    `Severity: ${t.severity}`,
+    `Status: ${t.status}`,
+    `Updated: ${t.updated_at}`
+  ];
+  document.getElementById('d_meta').innerHTML = meta.map(x => `<div class="meta"><span class="pill">${x}</span></div>`).join('');
+
+  const comments = data.comments || [];
+  document.getElementById('d_comments').innerHTML = comments.length
+    ? comments.map(c => `<pre><strong>${c.author}</strong> (${c.created_at})\n${c.body}</pre>`).join('')
+    : '<small>No comments</small>';
+}
+</script>
+
+</body>
+</html>

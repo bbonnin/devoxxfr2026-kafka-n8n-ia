@@ -1,0 +1,23 @@
+{
+  "payment:prod": {
+    "owner": "team-payments",
+    "tier": "critical",
+    "slo": "99.9%",
+    "runbook_scale": "scale-consumer",
+    "notes": "VIP impact possible"
+  },
+  "catalog:prod": {
+    "owner": "team-catalog",
+    "tier": "important",
+    "slo": "99.5%",
+    "runbook_scale": "scale-consumer",
+    "notes": "Search timeouts are often noise"
+  },
+  "events-router:prod": {
+    "owner": "team-platform",
+    "tier": "critical",
+    "slo": "99.9%",
+    "runbook_scale": "scale-consumer",
+    "notes": "Consumer lag remediation allowed"
+  }
+}

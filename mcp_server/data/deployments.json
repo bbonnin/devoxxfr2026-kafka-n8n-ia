@@ -1,0 +1,4 @@
+[
+  {"service":"payment","env":"prod","when":"2026-02-17T14:40:00Z","version":"1.42.0","actor":"ci"},
+  {"service":"catalog","env":"prod","when":"2026-02-17T09:10:00Z","version":"2.18.3","actor":"ci"}
+]
