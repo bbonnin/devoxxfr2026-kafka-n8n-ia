@@ -61,7 +61,8 @@ services:
       - mattermost-db-data:/var/lib/postgresql/data
 
   mattermost:
-    image: mattermost/mattermost-team-edition:release-11.4
+    image: mattermost/mattermost-preview:11.4.0
+    platform: linux/amd64 # Pour fonctionnement sur Mac / M3 (avec emulation)
     container_name: mattermost
     depends_on:
       - mattermost-db
