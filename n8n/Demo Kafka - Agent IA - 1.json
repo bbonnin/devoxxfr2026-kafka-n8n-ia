@@ -1,0 +1,233 @@
+{
+  "name": "Demo Kafka - Agent IA - 1",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// On 'normalise' les messages\nconst normalizedMsgs = []\nfor (const item of $input.all()) {\n  const event = item.json.message\n  const endpoint = event?.context?.endpoint || \"\"\n  const fingerprint = [\n    event.service, \n    event.env, \n    event.type, \n    endpoint].filter(Boolean).join(\":\")\n  normalizedMsgs.push({ event, fingerprint})\n}\n\nreturn normalizedMsgs"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "799b0aa6-7e6f-429e-8173-01874b06e1b0",
+      "name": "Normalisation événement"
+    },
+    {
+      "parameters": {
+        "topic": "events.v1",
+        "groupId": "n8n-kafka",
+        "options": {
+          "fromBeginning": false,
+          "jsonParseMessage": true
+        }
+      },
+      "type": "n8n-nodes-base.kafkaTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        0
+      ],
+      "id": "bb8ae255-8527-4c5b-8d54-1f4e5563411a",
+      "name": "Lecture Kafka",
+      "credentials": {
+        "kafka": {
+          "id": "UHCNdzIoayQGa7hd",
+          "name": "Kafka account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a deterministic automation agent.\n\nYou MUST:\n\nUse tools when needed.\n\nAfter all tool calls, output ONLY valid JSON.\n\nDo not output explanations.\n\nDo not output markdown.\n\nDo not output text before or after JSON.\n\nThe response MUST be valid JSON.\n\nIf the output is not valid JSON, it is considered a failure.\n\nRequired JSON schema:\n\n{\n\"decision\": \"IGNORE|ALERT|TICKET|REMEDIATE\",\n\"severity\": \"P0|P1|P2|P3\",\n\"confidence\": number,\n\"idempotency_key\": string,\n\"tools_used\": string[],\n\"actions\": array,\n\"rationale\": string\n}\n\nRules:\n\nREMEDIATE only if event.type==\"consumer.lag\" AND event.service==\"events-router\"\n\nOtherwise TICKET, ALERT or IGNORE\n\nReturn ONLY the JSON.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "069b32c5-5f78-4b2f-ae58-2721196ca582",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://mcp-server:7002/mcp",
+        "include": "selected",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        240
+      ],
+      "id": "7e77f7c0-4f43-49b9-bbf2-8f14cbb5b8da",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {
+          "temperature": 0,
+          "topP": 1,
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        144,
+        240
+      ],
+      "id": "a13597ad-b5f0-44fc-837b-682274ba5747",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "ojgCZcLEI3xfboeH",
+          "name": "Ollama (Entreprise)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const parsed = JSON.parse($json.output);\n  return [{ json: parsed }];\n} catch (e) {\n  throw new Error(\"Invalid JSON from LLM\");\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "0b75b9a3-5985-4711-a32c-6ef200cccc2c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5609fe60-dbb7-4c88-825a-4d8af2f97fe3",
+                    "leftValue": "",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        0
+      ],
+      "id": "b1da8079-1943-4769-911e-fa82bfa706f1",
+      "name": "Switch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lecture Kafka": {
+      "main": [
+        [
+          {
+            "node": "Normalisation événement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalisation événement": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f9024288-1cbb-45b7-bee5-41406702080c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8aa28521af542745adc41aef2de81e10fbf2bfc9f1d5688ea62110dfb2ab07b1"
+  },
+  "id": "kXDByiWs6J66Pg1f",
+  "tags": []
+}

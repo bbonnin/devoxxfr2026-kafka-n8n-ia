@@ -5,9 +5,9 @@
 
 ## Composants
 
-- **Apache Kafka (1 nœud)** : bus d’événements temps réel. Les producteurs publient des JSON sur un topic unique `events.v1`.  
-- **Kafdrop** : UI web pour Kafka (topics, messages, consumer groups). Idéal pour montrer “les events arrivent” pendant les tests / au début de la démo. Kafdrop est une *Kafka Web UI* pour voir les topics et parcourir les consumer groups/messages. [web:181][web:183]
-- **n8n** : orchestrateur low-code. Le workflow est déclenché par le **Kafka Trigger** à chaque nouveau message Kafka. [web:1]
+- **Apache Kafka** : les producteurs publient des JSON sur un topic unique `events.v1`.  
+- **Kafdrop** : UI web pour Kafka (topics, messages, ...). Pour montrer les événements au début de la démo.
+- **n8n** : orchestrateur low-code. Le workflow est déclenché par le **Kafka Trigger** à chaque nouveau message Kafka.
 - **Ollama (sur le host Mac)** : LLM **offline**. n8n y accède via `http://host.docker.internal:11434`.
 - **MCP server (Python, SSE)** : expose des **tools** (lookup CMDB, déploiements, incidents similaires, exécution runbook). n8n connecte ces tools à l’agent via le nœud **MCP Client Tool** (SSE endpoint). [page:32]
 - **Runbook API (Python/FastAPI)** : exécute une remédiation simulée (ex: scale-consumer) avec preuve (`/state` + retour JSON).
@@ -16,6 +16,13 @@
 
 
 ## Lancement des composants de la démo
+
+Utilisation du `docker-compose.yml`: 
+```bash
+docker compose up 
+# ou
+docker compose up --build
+```
 
 ### Kafka, n8n, ...
 
