@@ -6,12 +6,14 @@ from typing import Optional, Literal
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 DB_PATH = os.getenv("TICKET_DB_PATH", "/data/tickets.db")
 
 templates = Jinja2Templates(directory="templates")
 app = FastAPI(title="Ticket UI (Jira-like Kanban)")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 Status = Literal["TODO", "IN_PROGRESS", "DONE"]
 Severity = Literal["P0", "P1", "P2", "P3"]
@@ -100,6 +102,26 @@ def board(request: Request):
         "cols": cols
     })
 
+@app.get("/{ticket_id}", response_class=HTMLResponse)
+def ticket(ticket_id: int, request: Request):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM tickets WHERE id=?", (ticket_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    cur.execute("SELECT * FROM comments WHERE ticket_id=? ORDER BY created_at ASC", (ticket_id,))
+    comments = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    return templates.TemplateResponse("ticket.html", {
+        "request": request,
+        "ticket": dict(row),
+        "comments": comments
+    })
+
 @app.get("/api/board")
 def api_board():
     conn = db()
@@ -131,6 +153,15 @@ def api_create_ticket(payload: TicketCreate):
     ticket = dict(cur.fetchone())
     conn.close()
     return ticket
+
+@app.delete("/api/tickets/{ticket_id}")
+def api_delete_ticket(ticket_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM tickets WHERE id=?", (ticket_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 @app.patch("/api/tickets/{ticket_id}")
 def api_patch_ticket(ticket_id: int, patch: TicketPatch):

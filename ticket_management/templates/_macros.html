@@ -1,0 +1,39 @@
+{% macro card(ticket) -%}
+  <div class="card" draggable="true" ondragstart="onDragStart(event,'{{ticket.id}}')" onclick="showTicket('{{ticket.id}}')">
+    <div><strong>{{ticket.key}}</strong> - {{ticket.title}}</div>
+    <div class="meta">
+      <span class="pill">{{ticket.service}}</span>
+      <span class="pill">{{ticket.env}}</span>
+      <span class="pill sev-{{ticket.severity}}">{{ticket.severity}}</span>
+      <span class="pill">{{ticket.status}}</span>
+      <span class="align-right"><a class="no_decoration" href="#" onclick="deleteTicket('{{ticket.id}}')">🗑️</a></span>
+    </div>
+  </div>
+{%- endmacro %}
+
+{% macro full_card(ticket, comments) -%}
+  <div class="drawer centered">
+    <h3 id="d_title">{{ticket.key}} - {{ ticket.title }}</h3>
+
+    <div class="meta"><span class="pill">Service: ${ticket.service}</span></div>
+    <div class="meta"><span class="pill">Env: ${ticket.env}</span></div>
+    <div class="meta"><span class="pill">Severity: ${ticket.severity}</span></div>
+    <div class="meta"><span class="pill">Status: ${ticket.status}</span></div>
+    <div class="meta"><span class="pill">Updated: ${ticket.updated_at}</span></div>
+    
+    <h4>Description</h4>
+    <pre id="d_desc">{{ ticket.description }}</pre>
+
+    <h4>Comments</h4>
+    <div id="d_comments">
+      {% for comment in comments %}
+        <pre>
+          <strong>{{ comment.author }}</strong> ({{ comment.created_at }})<br>
+          {{ comment.body }}
+        </pre>
+      {% else %}
+        <small>No comments</small>
+      {% endfor %}
+    </div>
+  </div>
+{%- endmacro %}

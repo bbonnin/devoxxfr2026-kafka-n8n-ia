@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Ticket UI</title>
+  <link rel="stylesheet" type="text/css" href="/static/styles.css">
+</head>
+<body>
+  {% from "_macros.html" import full_card %}
+
+  <header>
+    <a class="no_decoration" href="/"><strong>Ticket UI</strong></a>
+  </header>
+
+  <div class="wrap">
+    {{ full_card(ticket, comments) }}
+  </div>
+</body>
+</html>

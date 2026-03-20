@@ -30,7 +30,7 @@ Pour démarrer un noeud Kafka et n8n, utilisez la commande: `docker compose up`
 
 ### Tools (MCP)
 
-Pour lancer le serveur MCP (simulation de tools utiliiable par l'agent): `uv run mcp-tools`
+Pour lancer le serveur MCP (simulation de tools utilisable par l'agent): `uv run mcp-tools`
 
 
 ## Workflow n8n
@@ -61,3 +61,22 @@ python eventgen.py remediate-lag
 
 ```
 
+## Notes complémentaires
+
+### Mattermost
+
+Pour activer les PAT (Personal Access Token):
+* Aller dans la system console
+* Sélectionner Integration Management
+* Activer Enable Personal Access Tokens
+* Retourner sur la page utilisateur
+* Aller dans Profile > Security
+* Créer le token
+
+Utilisation d'un bot:
+* Aller dans la system console
+* Créer un bot 
+* Retourner sur la page utilisateur (admin)
+* Aller dans Integrations
+* Créer sur "Create new token" du bot 
+* Ne pas oublier d'ajouter le bot à la team (System Console > Teams) ou directement sur le channel ?

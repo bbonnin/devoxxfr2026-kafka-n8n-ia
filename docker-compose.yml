@@ -32,6 +32,17 @@ services:
     environment:
       KAFKA_BROKERCONNECT: "kafka:29092"
 
+  redis:
+    image: redis:8.4-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
   n8n:
     image: n8nio/n8n:2.9.0
     container_name: n8n
@@ -74,9 +85,9 @@ services:
     volumes:
       - mattermost-data:/mattermost/data
 
-  ticket-ui:
-    build: ./ticket_ui
-    container_name: ticket-ui
+  ticket-management:
+    build: ./ticket_management
+    container_name: ticket-management
     ports:
       - "7001:7001"
     volumes:
@@ -88,9 +99,9 @@ services:
     ports:
       - "7003:7003"
 
-  mcp-server:
-    build: ./mcp_server
-    container_name: mcp-server
+  ops-mcp-server:
+    build: ./ops_mcp_server
+    container_name: ops-mcp-server
     ports:
       - "7002:7002"
     environment:
@@ -99,6 +110,7 @@ services:
 
 volumes:
   kafka-data:
+  redis-data:
   n8n-data:
   mattermost-db-data:
   mattermost-data:

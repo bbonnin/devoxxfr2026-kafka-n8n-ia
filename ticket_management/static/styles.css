@@ -1,0 +1,129 @@
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  background: #0b1020;
+  color: #e8ecff;
+}
+
+header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #222a4a;
+  background: #0c1430;
+  position: sticky;
+  top: 0;
+}
+
+/* --- Layout --- */
+
+.wrap {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+}
+
+.col {
+  flex: 1;
+  background: #0f1938;
+  border: 1px solid #222a4a;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 75vh;
+}
+
+.col h2 {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #101c40;
+  border-bottom: 1px solid #222a4a;
+}
+
+/* --- Components --- */
+
+.lane {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  background: #111f48;
+  border: 1px solid #2a3562;
+  border-radius: 10px;
+  padding: 10px;
+  cursor: grab;
+}
+
+.card:hover {
+  border-color: #4a5db1;
+}
+
+.meta {
+  font-size: 12px;
+  opacity: 0.9;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.meta span:last-child:not(:only-child) {
+  margin-left: auto;
+}
+
+.pill {
+  background: #182a61;
+  border: 1px solid #2a3a78;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* --- Severities --- */
+
+.sev-P0 { background: #5a1020; border-color: #8a2038; }
+.sev-P1 { background: #5a2a10; border-color: #8a4a20; }
+.sev-P2 { background: #16305a; border-color: #2a4a8a; }
+.sev-P3 { background: #163a2a; border-color: #2a6a4a; }
+
+/* --- Drawer & Elements --- */
+
+.drawer {
+  width: 360px;
+  background: #0f1938;
+  border: 1px solid #222a4a;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.drawer.centered {
+    margin: 0 auto;
+}
+
+.drawer h3 {
+  margin: 0 0 8px 0;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #0b1020;
+  border: 1px solid #222a4a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+a {
+  color: #9fb2ff;
+}
+
+a.no_decoration {
+  text-decoration: none;
+  color: #e8ecff;
+}
+
+small {
+  opacity: 0.8;
+}

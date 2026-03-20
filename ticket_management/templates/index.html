@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Ticket UI - Kanban</title>
+  <link rel="stylesheet" type="text/css" href="/static/styles.css">
+</head>
+<body>
+  {% from "_macros.html" import card %}
+
+  <header>
+    <strong>Ticket UI</strong> <small>Kanban (TODO → IN_PROGRESS → DONE)</small>
+  </header>
+
+  <div class="wrap">
+    <div class="col" data-status="TODO" ondragover="allowDrop(event)" ondrop="onDrop(event,'TODO')">
+      <h2>TODO</h2>
+      <div class="lane">
+        {% for t in cols["TODO"] %}
+          {{ card(t) }}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col" data-status="IN_PROGRESS" ondragover="allowDrop(event)" ondrop="onDrop(event,'IN_PROGRESS')">
+      <h2>IN PROGRESS</h2>
+      <div class="lane">
+        {% for t in cols["IN_PROGRESS"] %}
+          {{ card(t) }}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col" data-status="DONE" ondragover="allowDrop(event)" ondrop="onDrop(event,'DONE')">
+      <h2>DONE</h2>
+      <div class="lane">
+        {% for t in cols["DONE"] %}
+          {{ card(t) }}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="drawer">
+      <h3 id="d_title">Select a ticket</h3>
+      <div id="d_meta"></div>
+      <h4>Description</h4>
+      <pre id="d_desc"></pre>
+      <h4>Comments</h4>
+      <div id="d_comments"></div>
+    </div>
+  </div>
+
+  <script>
+  function allowDrop(ev) { ev.preventDefault(); }
+
+  function onDragStart(ev, ticketId) {
+    ev.dataTransfer.setData("ticketId", ticketId);
+  }
+
+  async function onDrop(ev, status) {
+    ev.preventDefault();
+    const ticketId = ev.dataTransfer.getData("ticketId");
+    await fetch(`/api/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    window.location.reload();
+  }
+
+  async function deleteTicket(ticketId) {
+    await fetch(`/api/tickets/${ticketId}`, {
+      method: 'DELETE'
+    });
+    window.location.reload();
+  }
+
+  async function showTicket(ticketId) {
+    const r = await fetch(`/api/tickets/${ticketId}`);
+    const data = await r.json();
+    const t = data.ticket;
+    document.getElementById('d_title').innerText = `${t.key} - ${t.title}`;
+    document.getElementById('d_desc').innerText = t.description;
+
+    const meta = [
+      `Service: ${t.service}`,
+      `Env: ${t.env}`,
+      `Severity: ${t.severity}`,
+      `Status: ${t.status}`,
+      `Updated: ${t.updated_at}`
+    ];
+    document.getElementById('d_meta').innerHTML = meta.map(x => `<div class="meta"><span class="pill">${x}</span></div>`).join('');
+
+    const comments = data.comments || [];
+    document.getElementById('d_comments').innerHTML = comments.length
+      ? comments.map(c => `<pre><strong>${c.author}</strong> (${c.created_at})\n${c.body}</pre>`).join('')
+      : '<small>No comments</small>';
+  }
+  </script>
+
+</body>
+</html>
