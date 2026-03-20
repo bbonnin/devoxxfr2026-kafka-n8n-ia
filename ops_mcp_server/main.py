@@ -36,35 +36,26 @@ class RunbookArgs(BaseModel):
 
 # --- Tools d'Enrichissement (Investigation) ---
 
-@mcp.tool(
-    description=(
-        #"Retrieve service metadata from CMDB using service and env. "
-        #"Returns owner, tier, criticality and escalation info. "
-        #"Call this tool whenever an event references a service."
-        """
-        Retrieve business criticality, owner, and SLO for a service.
-        ALWAYS call this first when a new event is received.
-        """
-    )
-)
+@mcp.tool()
 def get_service_context(service: str, env: str = "prod") -> dict[str, Any]:
+    """
+    Retrieve business criticality, owner, and SLO for a service.
+    ALWAYS call this first when a new event is received.
+    """
+
     key = f"{service}:{env}"
     if key not in CMDB:
         return {"found": False, "error": f"Service {key} unknown in CMDB"}
     return {"found": True, **CMDB[key]}
 
 
-@mcp.tool(
-    description=(
-        #"Return recent deployments for a service in a given environment. "
-        #"Use when investigating errors or latency issues."
-        """
-        Fetch recent deployments and similar past incidents.
-        Use this to correlate a spike of errors with a recent change.
-        """
-    )
-)
-def get_recent_deployments(service: str, env: str = "prod") -> dict[str, Any]:
+@mcp.tool()
+def get_recent_investigation_data(service: str, env: str = "prod") -> dict[str, Any]:
+    """
+    Fetch recent deployments and similar past incidents.
+    Use this to correlate a spike of errors with a recent change.
+    """
+
     recent_deps = [d for d in DEPLOYMENTS if d["service"] == service and d["env"] == env]
     # On pourrait aussi filtrer les incidents par service ici
     return {
@@ -72,31 +63,43 @@ def get_recent_deployments(service: str, env: str = "prod") -> dict[str, Any]:
         "known_issues": [i for i in INCIDENTS if i["fingerprint"].startswith(service)]
     }
 
-@mcp.tool(
-    description=(
-        "Return up to 3 past incidents with same fingerprint. "
-        "Use to estimate recurrence and severity."
-    )
-)
+
+@mcp.tool()
+def fetch_service_logs(service: str, lines: int = 5) -> dict[str, Any]:
+    """
+    Retrieve the last N log lines for a service to identify error patterns.
+    """
+    
+    return {
+        "service": service,
+        "logs": [
+            f"ERROR: Connection timeout from upstream for {service}",
+            f"WARN: Retrying connection (attempt 2/3)...",
+            f"DEBUG: Internal state: memory_usage=85%"
+        ]
+    }
+
+
+@mcp.tool()
 def get_similar_incidents(fingerprint: str) -> dict[str, Any]:
+    """
+    Return up to 3 past incidents with same fingerprint.
+    Use to estimate recurrence and severity.
+    """
+
     matches = [i for i in INCIDENTS if i["fingerprint"] == fingerprint]
     return {"fingerprint": fingerprint, "matches": matches[:3]}
 
 
 # --- Tools d'Action (Remédiation) ---
 
-@mcp.tool(
-    description=(
-        #"Execute operational runbook. "
-        #"Use ONLY when decision is REMEDIATE. "
-        #"dry_run must be false only if policy allows."
-        """
-        Execute an operational runbook to fix an issue.
-        Check 'get_service_context' first to ensure you have the right runbook_id.
-        """
-    )
-)
+@mcp.tool()
 async def execute_remediation(args: RunbookArgs) -> dict[str, Any]:
+    """
+    Execute an operational runbook to fix an issue.
+    Check 'get_service_context' first to ensure you have the right runbook_id.
+    """
+
     if not args.dry_run:
         if args.runbook_id not in ALLOW_REAL_RUNBOOKS or args.service not in ALLOW_REAL_SERVICES:
             return {
@@ -122,15 +125,13 @@ async def execute_remediation(args: RunbookArgs) -> dict[str, Any]:
             return {"ok": False, "error": str(e)}
 
 
-@mcp.tool(
-    description=(
-        """
-        Use this tool when no automated runbook is available or if the action is denied by policy.
-        It will create a high-priority notification for the on-call engineer.
-        """
-    )
-)
+@mcp.tool()
 def request_human_intervention(service: str, reason: str, priority: str = "P2") -> str:
+    """
+    Use this tool when no automated runbook is available or if the action is denied by policy.
+    It will create a high-priority notification for the on-call engineer.
+    """
+
     return f"SUCCESS: On-call engineer for {service} has been notified via Mattermost/PagerDuty. Reason: {reason}"
 
 

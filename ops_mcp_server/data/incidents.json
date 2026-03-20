@@ -1,5 +1,33 @@
 [
-  {"fingerprint":"catalog:prod:app.error:/search","summary":"Timeouts sporadiques /search","resolution":"Ignore si error_rate < 1% et pas de slo_burn","action":"IGNORE"},
-  {"fingerprint":"payment:prod:slo.burn","summary":"Burn rate élevé checkout","resolution":"Créer ticket + alerter owner + vérifier dernier déploiement","action":"TICKET"},
-  {"fingerprint":"events-router:prod:consumer.lag","summary":"Lag runaway","resolution":"Scale consumer (allowlisted)","action":"REMEDIATE"}
+  {
+    "fingerprint": "catalog:prod:app.error:/search",
+    "summary": "Timeouts sporadiques /search",
+    "resolution": "Ignore si error_rate < 1% et pas de slo_burn. Bruit connu depuis la v2.17.",
+    "action": "IGNORE"
+  },
+  {
+    "fingerprint": "catalog:prod:service.down",
+    "summary": "Catalog API inaccessible — fenêtre de maintenance planifiée",
+    "resolution": "Ne pas créer de ticket. Vérifier le calendrier de maintenance (maintenances le mardi entre 02h-04h UTC). Si hors fenêtre, escalader vers team-catalog.",
+    "action": "IGNORE",
+    "notes": "Récurrent lors des mises à jour d'index. Durée moyenne : 8 minutes."
+  },
+  {
+    "fingerprint": "payment:prod:app.error",
+    "summary": "Erreur applicative sur payment-service",
+    "resolution": "Corréler avec le dernier déploiement via get_recent_deployments. Si déploiement < 30min : suggérer rollback et créer ticket P1. Sinon créer ticket P2 et notifier team-payments.",
+    "action": "TICKET"
+  },
+  {
+    "fingerprint": "payment:prod:slo.burn",
+    "summary": "Burn rate élevé checkout — impact VIP possible",
+    "resolution": "Créer ticket P0 + alerter owner team-payments + vérifier dernier déploiement. Si customerTier=VIP, notifier aussi le support enterprise.",
+    "action": "TICKET"
+  },
+  {
+    "fingerprint": "events-router:prod:consumer.lag",
+    "summary": "Lag runaway sur events-router",
+    "resolution": "Scale consumer via runbook 'scale-consumer' (allowlisté pour ce service). Vérifier que le lag diminue dans les 2 minutes suivantes.",
+    "action": "REMEDIATE"
+  }
 ]

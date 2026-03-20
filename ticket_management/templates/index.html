@@ -51,36 +51,36 @@
   </div>
 
   <script>
-  function allowDrop(ev) { ev.preventDefault(); }
+  function allowDrop(ev) { ev.preventDefault() }
 
   function onDragStart(ev, ticketId) {
-    ev.dataTransfer.setData("ticketId", ticketId);
+    ev.dataTransfer.setData("ticketId", ticketId)
   }
 
   async function onDrop(ev, status) {
-    ev.preventDefault();
-    const ticketId = ev.dataTransfer.getData("ticketId");
+    ev.preventDefault()
+    const ticketId = ev.dataTransfer.getData("ticketId")
     await fetch(`/api/tickets/${ticketId}`, {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({status})
-    });
-    window.location.reload();
+    })
+    window.location.reload()
   }
 
   async function deleteTicket(ticketId) {
     await fetch(`/api/tickets/${ticketId}`, {
       method: 'DELETE'
-    });
-    window.location.reload();
+    })
+    window.location.reload()
   }
 
   async function showTicket(ticketId) {
-    const r = await fetch(`/api/tickets/${ticketId}`);
-    const data = await r.json();
-    const t = data.ticket;
-    document.getElementById('d_title').innerText = `${t.key} - ${t.title}`;
-    document.getElementById('d_desc').innerText = t.description;
+    const r = await fetch(`/api/tickets/${ticketId}`)
+    const data = await r.json()
+    const t = data.ticket
+    document.getElementById('d_title').innerText = `${t.key} - ${t.title}`
+    document.getElementById('d_desc').innerText = t.description
 
     const meta = [
       `Service: ${t.service}`,
@@ -88,13 +88,14 @@
       `Severity: ${t.severity}`,
       `Status: ${t.status}`,
       `Updated: ${t.updated_at}`
-    ];
-    document.getElementById('d_meta').innerHTML = meta.map(x => `<div class="meta"><span class="pill">${x}</span></div>`).join('');
+    ]
+    document.getElementById('d_meta').innerHTML = meta
+      .map(x => `<div class="meta"><span class="pill">${x}</span></div>`).join('')
 
-    const comments = data.comments || [];
+    const comments = data.comments || []
     document.getElementById('d_comments').innerHTML = comments.length
       ? comments.map(c => `<pre><strong>${c.author}</strong> (${c.created_at})\n${c.body}</pre>`).join('')
-      : '<small>No comments</small>';
+      : '<small>No comments</small>'
   }
   </script>
 

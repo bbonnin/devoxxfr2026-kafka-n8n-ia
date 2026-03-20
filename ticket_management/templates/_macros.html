@@ -15,11 +15,11 @@
   <div class="drawer centered">
     <h3 id="d_title">{{ticket.key}} - {{ ticket.title }}</h3>
 
-    <div class="meta"><span class="pill">Service: ${ticket.service}</span></div>
-    <div class="meta"><span class="pill">Env: ${ticket.env}</span></div>
-    <div class="meta"><span class="pill">Severity: ${ticket.severity}</span></div>
-    <div class="meta"><span class="pill">Status: ${ticket.status}</span></div>
-    <div class="meta"><span class="pill">Updated: ${ticket.updated_at}</span></div>
+    <div class="meta"><span class="pill">Service: {{ticket.service}}</span></div>
+    <div class="meta"><span class="pill">Env: {{ticket.env}}</span></div>
+    <div class="meta"><span class="pill">Severity: {{ticket.severity}}</span></div>
+    <div class="meta"><span class="pill">Status: {{ticket.status}}</span></div>
+    <div class="meta"><span class="pill">Updated: {{ticket.updated_at}}</span></div>
     
     <h4>Description</h4>
     <pre id="d_desc">{{ ticket.description }}</pre>

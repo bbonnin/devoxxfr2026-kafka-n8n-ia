@@ -105,7 +105,7 @@ services:
     ports:
       - "7002:7002"
     environment:
-      - TICKET_API_BASE=http://ticket-ui:7001
+      - TICKET_API_BASE=http://ticket-management:7001
       - RUNBOOK_API_BASE=http://runbook-api:7003
 
 volumes:
