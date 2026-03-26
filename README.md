@@ -6,7 +6,7 @@
 ## Composants
 
 Ce qui est lancé par le docker compose:
-* **Apache Kafka** : les producteurs publient des JSON sur un topic unique `events.v1`.  
+* **Apache Kafka** : les producteurs publient des JSON sur un topic unique `events.all`.  
 * **Kafdrop** : UI web pour Kafka (topics, messages, ...). Pour montrer les événements au début de la démo.
 * **n8n** : orchestrateur low-code. Le workflow est déclenché par le **Kafka Trigger** à chaque nouveau message Kafka.
 * **MCP server (Python, SSE)** : expose des **tools** (lookup CMDB, déploiements, incidents similaires, exécution runbook). n8n connecte ces tools à l’agent via le nœud **MCP Client Tool** (SSE endpoint).

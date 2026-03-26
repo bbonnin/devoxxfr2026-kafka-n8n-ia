@@ -1,0 +1,479 @@
+{
+  "name": "Demo-Kafka-Agent_IA-Anthropic",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// On 'normalise' les messages\nconst normalizedMsgs = []\nfor (const item of $input.all()) {\n  const event = item.json.message\n  const endpoint = event?.context?.endpoint || \"\"\n  const fingerprint = [\n    event.service, \n    event.env, \n    event.type, \n    endpoint].filter(Boolean).join(\":\")\n  normalizedMsgs.push({ event, fingerprint})\n}\n\nreturn normalizedMsgs"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        128
+      ],
+      "id": "f5a97828-d251-414c-8118-b1a505a0c959",
+      "name": "Normalisation événement"
+    },
+    {
+      "parameters": {
+        "topic": "events.all",
+        "groupId": "n8n-kafka",
+        "options": {
+          "fromBeginning": false,
+          "jsonParseMessage": true
+        }
+      },
+      "type": "n8n-nodes-base.kafkaTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1360,
+        128
+      ],
+      "id": "6c7cf0ce-f805-4887-8eec-e4d6f825bb49",
+      "name": "Lecture Kafka",
+      "credentials": {
+        "kafka": {
+          "id": "UHCNdzIoayQGa7hd",
+          "name": "Kafka account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a deterministic SRE Automation Agent.\nYou receive a Kafka event and must decide the best operational response.\nOutput ONLY a raw valid JSON object. No markdown, no preamble, no explanation outside the JSON.\n\n═══════════════════════════════════════\nSTEP 1 — INVESTIGATE (mandatory)\n═══════════════════════════════════════\nALWAYS call these tools in order:\n1. get_service_context(service, env)\n2. get_recent_deployments(service, env)\n3. get_similar_incidents(fingerprint)\n\n═══════════════════════════════════════\nSTEP 2 — DECIDE (strict rules, in order)\n═══════════════════════════════════════\n\nRULE 1 — IGNORE\n  IF get_similar_incidents returns action=IGNORE\n  OR get_service_context.notes contain \"maintenance\"\n  AND event.signals.error_rate < 0.01\n  → decision=IGNORE. STOP.\n\nRULE 2 — TICKET\n  IF event.service == \"payment\"\n  OR event.type == \"slo.burn\"\n  OR event.signals.error_rate > 0.03\n  OR get_similar_incidents returns action=TICKET\n  → decision=TICKET\n  → severity=P0 if event.context.customerTier==\"VIP\" or event.signals.slo_burn > 5\n  → severity=P1 if get_service_context.tier==\"critical\"\n  → severity=P2 otherwise\n  STOP.\n\nRULE 3 — REMEDIATE\n  IF event.type == \"consumer.lag\"\n  AND event.service == \"events-router\"\n  → call execute_remediation(runbook_id=\"scale-consumer\", service=\"events-router\",\n      env=event.env, reason=\"Lag runaway detected\", dry_run=false)\n  → decision=REMEDIATE. STOP.\n\nRULE 4 — ALERT\n  IF anomaly detected but no rule above matched\n  → decision=ALERT. STOP.\n\nRULE 5 — IGNORE (default)\n  → decision=IGNORE.\n\n═══════════════════════════════════════\nSTEP 3 — OUTPUT FORMAT (strict)\n═══════════════════════════════════════\nOutput ONLY a raw valid JSON. \n\nCONDITION: \n- If decision == \"TICKET\", you MUST include the \"ticket_metadata\" object.\n- If decision != \"TICKET\", you MUST OMIT the \"ticket_metadata\" field entirely.\n\nJSON Structure:\n{\n  \"decision\": \"IGNORE|ALERT|TICKET|REMEDIATE\",\n  \"severity\": \"P0|P1|P2|P3\",\n  \"service\": \"<copy event.service>\",\n  \"env\": \"<copy event.env>\",\n  \"event_id\": \"<copy event.eventId>\",\n  \"ticket_metadata\": { \n     \"summary\": \"[SEVERITY] - [SERVICE] - Brief title\",\n     \"description\": \"Markdown report with: 1. Observation 2. Investigation 3. Next steps\"\n  }, \n  \"confidence\": <0.0 to 1.0>,\n  \"tools_used\": [...],\n  \"actions\": [...],\n  \"rationale\": \"<one sentence explanation>\"\n}",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -912,
+        128
+      ],
+      "id": "84f8e30b-2661-4c6b-a0f6-b21220218fb0",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5609fe60-dbb7-4c88-825a-4d8af2f97fe3",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "TICKET",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "TICKET"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0744385f-b414-4500-a039-be455751e16d",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "ALERT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ALERT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d685ef94-5d77-4fc1-bb8b-0cfe16a44219",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "IGNORE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IGNORE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d4d6d68c-c27a-493d-8fd0-2327d27acf99",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "REMEDIATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "REMEDIATE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -320,
+        96
+      ],
+      "id": "94d0871e-f10d-442b-b5dd-495a7c0f83ae",
+      "name": "Switch DECISION"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        192
+      ],
+      "id": "c2f48943-5562-462c-ad1a-7517414272d8",
+      "name": "Trash"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log de l'action de remédiation\nconst d = $json;\nconsole.log(`[REMEDIATE] ${d.service}/${d.env} → ${d.actions.join(', ')} | ${d.rationale}`);\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        384
+      ],
+      "id": "0e99aa2e-5a8f-4a35-bacb-2bb83b020ecd",
+      "name": "Log Remediation"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -1040,
+        368
+      ],
+      "id": "885dd2c9-f1de-4979-a5b3-9c1d3f3f069a",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "W144CQPcB2vMRlwg",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.event.eventId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        -848,
+        368
+      ],
+      "id": "b7386d96-62ae-4b83-8fed-2caad842b056",
+      "name": "Redis (mémoire)",
+      "credentials": {
+        "redis": {
+          "id": "tWiHNsjeIQ80bRkE",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://ops-mcp-server:7002/mcp",
+        "include": "selected",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        368
+      ],
+      "id": "c44b961a-4243-45a4-aa7f-0b4a6832c38e",
+      "name": "Tools OPS (via MCP)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output ?? $json.text ?? \"\";\nlet parsed;\ntry {\n  const clean = raw.replace(/^```json\\s*/i, \"\").replace(/```\\s*$/,\"\").trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  // Fallback : extraire le JSON du texte si le LLM a ajouté du texte autour\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error(\"No JSON found in LLM output: \" + raw.substring(0, 200));\n  parsed = JSON.parse(match[0]);\n}\n\n// Valeurs critiques toujours surchargées depuis l'événement source\nconst src = $('Normalisation événement').first().json.event;\nparsed.service  = src.service;\nparsed.env      = src.env;\n\n// Valeurs par défaut si le LLM a oublié un champ\nparsed.decision   = (parsed.decision   || \"IGNORE\").toUpperCase();\nparsed.severity   = (parsed.severity   || \"P3\").toUpperCase();\nparsed.confidence = parsed.confidence  ?? 0.5;\nparsed.tools_used = parsed.tools_used  || [];\nparsed.actions    = parsed.actions     || [];\nparsed.rationale  = parsed.rationale   || \"No rationale provided\";\n\n// Valider que decision est dans les valeurs attendues\nconst VALID = [\"IGNORE\",\"ALERT\",\"TICKET\",\"REMEDIATE\"];\nif (!VALID.includes(parsed.decision)) parsed.decision = \"ALERT\";\n\nreturn [{ json: parsed }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        128
+      ],
+      "id": "369d3bdc-4f58-4912-b93e-8780cd04a4a4",
+      "name": "Enrichissement sortie"
+    },
+    {
+      "parameters": {
+        "channelId": "aks14u8bebf8dkrpgiwhpcqg7a",
+        "message": "=### :rotating_light: [{{ $('Création ticket').item.json.severity }}] {{ $('Création ticket').item.json.service }} — {{ $('Création ticket').item.json.env }}\n**Décision** : `{{ $('Switch DECISION').item.json.decision }}`  |  **Confiance** : {{ $('Switch DECISION').item.json.confidence }}\n**Raison** : {{ $('Switch DECISION').item.json.rationale }}\n{{ $('Switch DECISION').item.json.decision === 'TICKET' ? '**Ticket** : http://localhost:7001/' + $('Création ticket').item.json.id : '' }}\n**Outils** : {{ $('Switch DECISION').item.json.tools_used.join(', ') }}\n> *Event ID : {{ $('Switch DECISION').item.json.event_id }}*",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.mattermost",
+      "typeVersion": 1,
+      "position": [
+        128,
+        -32
+      ],
+      "id": "8d5cf2b1-e475-4b4a-9b60-62f01da05682",
+      "name": "Envoi message",
+      "credentials": {
+        "mattermostApi": {
+          "id": "A179wFI7KpAKjnO8",
+          "name": "Mattermost account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ticket-management:7001/api/tickets",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.ticket_metadata.summary }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.ticket_metadata.description }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity }}"
+            },
+            {
+              "name": "event_id",
+              "value": "={{ $json.event_id }}"
+            },
+            {
+              "name": "service",
+              "value": "={{ $json.service }}"
+            },
+            {
+              "name": "env",
+              "value": "={{ $json.env }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -96,
+        -96
+      ],
+      "id": "26735aa3-fe11-4428-9bad-d91722565654",
+      "name": "Création ticket"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lecture Kafka": {
+      "main": [
+        [
+          {
+            "node": "Normalisation événement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalisation événement": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Enrichissement sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch DECISION": {
+      "main": [
+        [
+          {
+            "node": "Création ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envoi message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trash",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Remediation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis (mémoire)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tools OPS (via MCP)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrichissement sortie": {
+      "main": [
+        [
+          {
+            "node": "Switch DECISION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Création ticket": {
+      "main": [
+        [
+          {
+            "node": "Envoi message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "82809ddd-b4bd-4033-82d9-9632094972ec",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8aa28521af542745adc41aef2de81e10fbf2bfc9f1d5688ea62110dfb2ab07b1"
+  },
+  "id": "7YJcdscY2Niolbl9",
+  "tags": []
+}

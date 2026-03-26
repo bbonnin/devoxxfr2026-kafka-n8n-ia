@@ -1,0 +1,152 @@
+{
+  "name": "Clean-before-demo",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "aadb3d01-216f-4282-949f-4f92584cc992",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "keys",
+        "keyPattern": "*",
+        "getValues": false
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        816,
+        0
+      ],
+      "id": "5d7e2baf-4a97-4aa3-815d-f065182827d7",
+      "name": "Redis - Check keys",
+      "credentials": {
+        "redis": {
+          "id": "tWiHNsjeIQ80bRkE",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $json.keys }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "c185861b-b592-4a44-b5b5-ddb864162365",
+      "name": "Redis - Remove key",
+      "credentials": {
+        "redis": {
+          "id": "tWiHNsjeIQ80bRkE",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "keys",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ffec9c6d-171a-4ffd-bd18-ce49b8cb3cb8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "keys",
+        "keyPattern": "*",
+        "getValues": false
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "b0dd7e3f-b0f6-4e50-9a53-24996fa9b499",
+      "name": "Redis - Get keys",
+      "credentials": {
+        "redis": {
+          "id": "tWiHNsjeIQ80bRkE",
+          "name": "Redis account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Redis - Get keys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis - Remove key": {
+      "main": [
+        [
+          {
+            "node": "Redis - Check keys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Redis - Remove key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis - Get keys": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f37a3807-9d5c-47a2-b970-9dd610a55907",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8aa28521af542745adc41aef2de81e10fbf2bfc9f1d5688ea62110dfb2ab07b1"
+  },
+  "id": "3yFWB7xc2OG305ex",
+  "tags": []
+}

@@ -111,7 +111,7 @@ def cmd_demo_sequence(args):
     for s_key in sequence:
         scenario = SCENARIOS[s_key]
         send(args.producer, args.topic, scenario["func"](), scenario["label"])
-        print(f"   {BLUE}-->{RESET} En attente du traitement n8n...")
+        print(f"   {BLUE}-->{RESET} Waiting processing...")
         time.sleep(args.interval)
 
 
@@ -126,17 +126,15 @@ def cmd_replay(args):
 def main():
     parser = argparse.ArgumentParser(prog="eventgen")
     parser.add_argument("--bootstrap", default=os.getenv("KAFKA_BOOTSTRAP", "localhost:9092"))
-    parser.add_argument("--topic", default=os.getenv("KAFKA_TOPIC", "events.v1"))
+    parser.add_argument("--topic", default=os.getenv("KAFKA_TOPIC", "events.all"))
 
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    # Commande Séquence
-    p_seq = sub.add_parser("demo-sequence", help="Lance l'histoire complète")
+    p_seq = sub.add_parser("demo-sequence", help="Run several commands")
     p_seq.add_argument("--interval", type=int, default=10)
     p_seq.set_defaults(fn=cmd_demo_sequence)
 
-    # Commande Replay (Réintégrée)
-    p_rep = sub.add_parser("replay", help="Rejoue un événement avec un ID fixe")
+    p_rep = sub.add_parser("replay", help="Replay an event with a specific ID")
     p_rep.add_argument("--template", choices=list(SCENARIOS.keys()), required=True)
     p_rep.add_argument("--event-id", required=True, help="L'ID original à simuler")
     p_rep.set_defaults(fn=cmd_replay)

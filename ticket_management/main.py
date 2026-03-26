@@ -1,4 +1,5 @@
 import os
+import logging
 import sqlite3
 from datetime import datetime, timezone
 from typing import Optional, Literal
@@ -11,8 +12,10 @@ from pydantic import BaseModel
 
 DB_PATH = os.getenv("TICKET_DB_PATH", "/data/tickets.db")
 
+logger = logging.getLogger("uvicorn.error")
+
 templates = Jinja2Templates(directory="templates")
-app = FastAPI(title="Ticket UI (Jira-like Kanban)")
+app = FastAPI(title="Ticket Management (Jira-like Kanban)")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 Status = Literal["TODO", "IN_PROGRESS", "DONE"]
@@ -23,8 +26,10 @@ def now_iso() -> str:
 
 def db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=10000")
     return conn
 
 def init_db():
@@ -64,9 +69,9 @@ def _startup():
 
 def next_key(conn) -> str:
     cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) AS c FROM tickets")
-    c = cur.fetchone()["c"]
-    return f"OPS-{c + 1}"
+    cur.execute("SELECT COALESCE(MAX(id), 0) AS m FROM tickets")
+    m = cur.fetchone()["m"]
+    return f"OPS-{m + 1}"
 
 class TicketCreate(BaseModel):
     title: str
@@ -124,6 +129,7 @@ def ticket(ticket_id: int, request: Request):
 
 @app.get("/api/board")
 def api_board():
+    logger.info("GET /api/board")
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM tickets ORDER BY updated_at DESC")
@@ -136,6 +142,7 @@ def api_board():
 
 @app.post("/api/tickets")
 def api_create_ticket(payload: TicketCreate):
+    logger.info("POST /api/tickets - payload: %s", payload.model_dump())
     conn = db()
     cur = conn.cursor()
 
@@ -156,6 +163,7 @@ def api_create_ticket(payload: TicketCreate):
 
 @app.delete("/api/tickets/{ticket_id}")
 def api_delete_ticket(ticket_id: int):
+    logger.info("DELETE /api/tickets/%s", ticket_id)
     conn = db()
     cur = conn.cursor()
     cur.execute("DELETE FROM tickets WHERE id=?", (ticket_id,))
@@ -165,6 +173,7 @@ def api_delete_ticket(ticket_id: int):
 
 @app.patch("/api/tickets/{ticket_id}")
 def api_patch_ticket(ticket_id: int, patch: TicketPatch):
+    logger.info("PATCH /api/tickets/%s - payload: %s", ticket_id, patch.model_dump(exclude_none=True))
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM tickets WHERE id=?", (ticket_id,))
@@ -203,6 +212,7 @@ def api_patch_ticket(ticket_id: int, patch: TicketPatch):
 
 @app.get("/api/tickets/{ticket_id}")
 def api_get_ticket(ticket_id: int):
+    logger.info("GET /api/tickets/%s", ticket_id)
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM tickets WHERE id=?", (ticket_id,))
@@ -218,6 +228,7 @@ def api_get_ticket(ticket_id: int):
 
 @app.post("/api/tickets/{ticket_id}/comment")
 def api_add_comment(ticket_id: int, payload: CommentCreate):
+    logger.info("POST /api/tickets/%s/comment - author: %s, body: %s", ticket_id, payload.author, payload.body)
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT id FROM tickets WHERE id=?", (ticket_id,))
