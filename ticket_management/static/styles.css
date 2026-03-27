@@ -21,26 +21,80 @@ header {
   gap: 8px;
 }
 
-header strong {
-  color: #172B4D;
-  font-size: 15px;
+header strong { color: #172B4D; font-size: 15px; }
+header small  { color: #6B778C; font-size: 12px; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
-header small {
-  color: #6B778C;
+/* --- Live indicator --- */
+
+.refresh-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
+  color: #6B778C;
 }
+
+.refresh-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #00875A;
+}
+
+.refresh-dot.pulse { animation: pulse 0.4s ease-out; }
+
+@keyframes pulse {
+  0%   { transform: scale(1);   background: #00875A; }
+  50%  { transform: scale(1.6); background: #36B37E; }
+  100% { transform: scale(1);   background: #00875A; }
+}
+
+/* --- Buttons --- */
+
+.btn-reset {
+  font-size: 12px; font-weight: 500;
+  color: #DE350B; background: #FFEBE6;
+  border: 1px solid #FFBDAD; border-radius: 3px;
+  padding: 4px 10px; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-reset:hover { background: #FFBDAD; }
+
+.btn-zoom {
+  font-size: 12px; font-weight: 500;
+  color: #0052CC; background: #DEEBFF;
+  border: 1px solid #B3D4FF; border-radius: 3px;
+  padding: 4px 10px; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-zoom:hover { background: #B3D4FF; }
+
+.btn-delete {
+  font-size: 12px; font-weight: 500;
+  color: #DE350B; background: #FFEBE6;
+  border: 1px solid #FFBDAD; border-radius: 3px;
+  padding: 4px 10px; cursor: pointer;
+}
+.btn-delete:hover { background: #FFBDAD; }
 
 /* --- Layout --- */
 
 .wrap {
   display: flex;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
+  overflow-x: auto;
 }
 
 .col {
   flex: 1;
+  min-width: 160px;
   background: #F4F5F7;
   border-radius: 4px;
   overflow: hidden;
@@ -57,14 +111,30 @@ header small {
   color: #5E6C84;
   background: #F4F5F7;
   border-bottom: 1px solid #DFE1E6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Bandeau couleur en haut de chaque colonne — style Jira */
+.col-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5E6C84;
+  background: #DFE1E6;
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+
+/* Bandeaux de colonne */
 .col[data-status="TODO"]        h2 { border-top: 3px solid #DFE1E6; }
 .col[data-status="IN_PROGRESS"] h2 { border-top: 3px solid #0052CC; }
+.col[data-status="IN_TEST"]     h2 { border-top: 3px solid #FF8B00; }
 .col[data-status="DONE"]        h2 { border-top: 3px solid #00875A; }
+.col[data-status="CANCELLED"]   h2 { border-top: 3px solid #97A0AF; }
 
-/* --- Components --- */
+.col-cancelled { opacity: 0.75; }
+
+/* --- Cards --- */
 
 .lane {
   padding: 8px;
@@ -78,7 +148,7 @@ header small {
   border: 1px solid #DFE1E6;
   border-radius: 3px;
   padding: 10px 12px;
-  cursor: grab;
+  cursor: pointer;
   box-shadow: 0 1px 2px rgba(9, 30, 66, 0.08);
   transition: box-shadow 0.15s, border-color 0.15s;
 }
@@ -92,9 +162,27 @@ header small {
   font-size: 11px;
   color: #0052CC;
   font-weight: 600;
-  display: block;
-  margin-bottom: 3px;
+  display: inline;
+  margin-right: 4px;
 }
+
+.card-rationale {
+  font-size: 11px;
+  color: #5E6C84;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #EBECF0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.card-new { animation: slideIn 0.35s ease-out; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Meta / pills --- */
 
 .meta {
   font-size: 11px;
@@ -106,9 +194,9 @@ header small {
   align-items: center;
 }
 
-.meta span:last-child:not(:only-child) {
-  margin-left: auto;
-}
+.meta span:last-child:not(:only-child) { margin-left: auto; }
+
+.align-right { margin-left: auto; }
 
 .pill {
   background: #EBECF0;
@@ -120,53 +208,123 @@ header small {
   font-weight: 500;
 }
 
-/* --- Severities — point coloré + label --- */
+/* --- Env --- */
+.env-prod    { background: #E6FCFF; color: #00A3BF; font-weight: 700; }
+.env-staging { background: #EAE6FF; color: #6554C0; font-weight: 700; }
 
-.sev-P0 {
-  background: #FFEBE6;
-  color: #DE350B;
-  font-weight: 700;
+/* --- Severities --- */
+.sev-P0 { background: #FFEBE6; color: #DE350B; font-weight: 700; }
+.sev-P1 { background: #FFF4E5; color: #FF8B00; font-weight: 700; }
+.sev-P2 { background: #DEEBFF; color: #0052CC; font-weight: 700; }
+.sev-P3 { background: #E3FCEF; color: #00875A; font-weight: 700; }
+
+/* --- Status pills --- */
+.status-TODO        { background: #EBECF0; color: #42526E; }
+.status-IN_PROGRESS { background: #DEEBFF; color: #0052CC; }
+.status-IN_TEST     { background: #FFF4E5; color: #FF8B00; }
+.status-DONE        { background: #E3FCEF; color: #00875A; }
+.status-CANCELLED   { background: #F4F5F7; color: #97A0AF; }
+
+/* --- Modal --- */
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.45);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
-.sev-P1 {
-  background: #FFF4E5;
-  color: #FF8B00;
-  font-weight: 700;
-}
+.modal-overlay.open { display: flex; }
 
-.sev-P2 {
-  background: #DEEBFF;
-  color: #0052CC;
-  font-weight: 700;
-}
-
-.sev-P3 {
-  background: #E3FCEF;
-  color: #00875A;
-  font-weight: 700;
-}
-
-/* --- Drawer & Elements --- */
-
-.drawer {
-  width: 360px;
+.modal {
   background: #FFFFFF;
-  border: 1px solid #DFE1E6;
-  border-radius: 4px;
-  padding: 14px;
-  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.08);
+  border-radius: 6px;
+  padding: 24px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(9, 30, 66, 0.25);
 }
 
-.drawer.centered {
-  margin: 0 auto;
+.modal-close {
+  position: absolute;
+  top: 14px; right: 16px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #6B778C;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 3px;
+}
+.modal-close:hover { background: #EBECF0; }
+
+.modal-header { margin-bottom: 12px; padding-right: 32px; }
+
+.modal-key {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0052CC;
+  display: block;
+  margin-bottom: 4px;
 }
 
-.drawer h3 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
   font-weight: 600;
   color: #172B4D;
+  line-height: 1.3;
 }
+
+.modal-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.modal-rationale {
+  font-size: 12px;
+  color: #5E6C84;
+  font-style: italic;
+  background: #F4F5F7;
+  border-left: 3px solid #0052CC;
+  padding: 8px 10px;
+  border-radius: 0 3px 3px 0;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #DFE1E6;
+  font-size: 12px;
+  color: #6B778C;
+}
+
+.modal-footer select {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  color: #172B4D;
+  background: #FFFFFF;
+  cursor: pointer;
+}
+
+/* --- Misc --- */
 
 pre {
   white-space: pre-wrap;
@@ -188,16 +346,170 @@ h4 {
   margin: 14px 0 6px 0;
 }
 
-a {
-  color: #0052CC;
+a { color: #0052CC; }
+a.no_decoration { text-decoration: none; color: #42526E; }
+small { opacity: 0.75; font-size: 12px; }
+
+/* --- Grand écran --- */
+
+body.large-screen .card          { padding: 14px 16px; }
+body.large-screen .card strong   { font-size: 13px; }
+body.large-screen .card-rationale{ font-size: 13px; }
+body.large-screen .pill          { font-size: 13px; padding: 3px 10px; }
+body.large-screen .col h2        { font-size: 13px; padding: 10px 16px; }
+body.large-screen header strong  { font-size: 18px; }
+body.large-screen .lane          { gap: 10px; }
+
+/* --- Utilisé dans ticket.html --- */
+
+.ticket-page {
+  /*max-width: 680px;*/
+  width: 75%;
+  margin: 32px auto;
+  padding: 0 16px 48px;
 }
 
-a.no_decoration {
-  text-decoration: none;
+.breadcrumb {
+  font-size: 12px;
+  color: #6B778C;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.breadcrumb a { color: #0052CC; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb-sep { color: #DFE1E6; }
+
+.ticket-card {
+  background: #FFFFFF;
+  border: 1px solid #DFE1E6;
+  border-radius: 6px;
+  padding: 28px 32px;
+  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.08);
+}
+
+.ticket-key {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0052CC;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.ticket-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #172B4D;
+  margin: 0 0 16px 0;
+  line-height: 1.3;
+}
+
+.ticket-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ticket-rationale {
+  font-size: 13px;
+  color: #5E6C84;
+  font-style: italic;
+  background: #F4F5F7;
+  border-left: 3px solid #0052CC;
+  padding: 10px 14px;
+  border-radius: 0 3px 3px 0;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.ticket-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5E6C84;
+  margin: 20px 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #DFE1E6;
+}
+
+.ticket-description {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #F4F5F7;
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #172B4D;
+  line-height: 1.6;
+  font-family: inherit;
+}
+
+.comment {
+  border: 1px solid #DFE1E6;
+  border-radius: 3px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: #FAFBFC;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.comment-author {
+  font-size: 12px;
+  font-weight: 600;
   color: #172B4D;
 }
 
-small {
-  opacity: 0.75;
-  font-size: 12px;
+.comment-date {
+  font-size: 11px;
+  color: #97A0AF;
 }
+
+.comment-body {
+  font-size: 13px;
+  color: #172B4D;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.no-comments {
+  font-size: 13px;
+  color: #97A0AF;
+  font-style: italic;
+}
+
+.ticket-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #DFE1E6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #97A0AF;
+}
+
+.btn-back {
+  font-size: 12px;
+  font-weight: 500;
+  color: #0052CC;
+  background: #DEEBFF;
+  border: 1px solid #B3D4FF;
+  border-radius: 3px;
+  padding: 5px 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-back:hover { background: #B3D4FF; }

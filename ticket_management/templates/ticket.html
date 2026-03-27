@@ -2,18 +2,74 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Ticket Management</title>
+  <title>{{ ticket.key }} — {{ ticket.title }}</title>
   <link rel="stylesheet" type="text/css" href="/static/styles.css">
 </head>
 <body>
-  {% from "_macros.html" import full_card %}
 
   <header>
-    <a class="no_decoration" href="/"><strong>Ticket Management</strong></a>
+    <strong>Ticket Management</strong>
+    <small>Kanban</small>
   </header>
 
-  <div class="wrap">
-    {{ full_card(ticket, comments) }}
+  <div class="ticket-page">
+
+    <div class="breadcrumb">
+      <a href="/">Board</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>{{ ticket.key }}</span>
+    </div>
+
+    <div class="ticket-card">
+
+      <span class="ticket-key">{{ ticket.key }}</span>
+      <h1 class="ticket-title">{{ ticket.title }}</h1>
+
+      <div class="ticket-pills">
+        <span class="pill env-{{ ticket.env }}">{{ ticket.env }}</span>
+        <span class="pill sev-{{ ticket.severity }}">{{ ticket.severity }}</span>
+        <span class="pill">{{ ticket.service }}</span>
+        <span class="pill status-{{ ticket.status }}">{{ ticket.status }}</span>
+        <span class="pill">Mis à jour : {{ ticket.updated_at }}</span>
+        {% if ticket.event_id %}
+        <span class="pill" title="Event ID Kafka">🔗 <a href="http://localhost:9000/topic/events.all/search-messages?searchText={{ticket.event_id}}&startTimestamp=1970-01-01+00%3A00%3A00.000" target="blank" class="no_decoration">{{ ticket.event_id[:8] }}...</a></span>
+        {% endif %}
+      </div>
+
+      {% if ticket.rationale %}
+      <div class="ticket-rationale">🤖 {{ ticket.rationale }}</div>
+      {% endif %}
+
+      <div class="ticket-section-title">Description</div>
+      <pre class="ticket-description">{{ ticket.description }}</pre>
+
+      <div class="ticket-section-title">
+        Commentaires
+        {% if comments %}({{ comments | length }}){% endif %}
+      </div>
+
+      {% if comments %}
+        {% for c in comments %}
+        <div class="comment">
+          <div class="comment-header">
+            <span class="comment-author">{{ c.author }}</span>
+            <span class="comment-date">{{ c.created_at }}</span>
+          </div>
+          <div class="comment-body">{{ c.body }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-comments">Aucun commentaire</p>
+      {% endif %}
+
+      <div class="ticket-footer">
+        <span>Créé le {{ ticket.created_at }}</span>
+        <a class="btn-back" href="/">← Retour au board</a>
+      </div>
+
+    </div>
+
   </div>
+
 </body>
 </html>

@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="templates")
 app = FastAPI(title="Ticket Management (Jira-like Kanban)")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-Status = Literal["TODO", "IN_PROGRESS", "DONE"]
+Status = Literal["TODO", "IN_PROGRESS", "IN_TEST", "DONE", "CANCELLED"]
 Severity = Literal["P0", "P1", "P2", "P3"]
 
 def now_iso() -> str:
@@ -46,6 +46,7 @@ def init_db():
       severity TEXT NOT NULL,
       status TEXT NOT NULL,
       event_id TEXT,
+      rationale TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
@@ -80,6 +81,7 @@ class TicketCreate(BaseModel):
     env: str
     severity: Severity = "P2"
     event_id: Optional[str] = None
+    rationale: Optional[str] = None
 
 class TicketPatch(BaseModel):
     status: Optional[Status] = None
@@ -90,6 +92,8 @@ class CommentCreate(BaseModel):
     author: str = "n8n"
     body: str
 
+ALL_STATUSES = ["TODO", "IN_PROGRESS", "IN_TEST", "DONE", "CANCELLED"]
+
 @app.get("/", response_class=HTMLResponse)
 def board(request: Request):
     conn = db()
@@ -98,13 +102,14 @@ def board(request: Request):
     tickets = [dict(r) for r in cur.fetchall()]
     conn.close()
 
-    cols = {"TODO": [], "IN_PROGRESS": [], "DONE": []}
+    cols = {s: [] for s in ALL_STATUSES}
     for t in tickets:
         cols.setdefault(t["status"], []).append(t)
-
+ 
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "cols": cols
+        "cols": cols,
+        "all_statuses": ALL_STATUSES
     })
 
 @app.get("/{ticket_id}", response_class=HTMLResponse)
@@ -149,10 +154,10 @@ def api_create_ticket(payload: TicketCreate):
     key = next_key(conn)
     ts = now_iso()
     cur.execute("""
-      INSERT INTO tickets(key,title,description,service,env,severity,status,event_id,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?)
+      INSERT INTO tickets(key,title,description,service,env,severity,status,event_id,rationale,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
     """, (key, payload.title, payload.description, payload.service, payload.env,
-          payload.severity, "TODO", payload.event_id, ts, ts))
+          payload.severity, "TODO", payload.event_id, payload.rationale, ts, ts))
     ticket_id = cur.lastrowid
     conn.commit()
 
@@ -160,6 +165,17 @@ def api_create_ticket(payload: TicketCreate):
     ticket = dict(cur.fetchone())
     conn.close()
     return ticket
+
+@app.delete("/api/tickets")
+def api_delete_all_tickets():
+    logger.info("DELETE /api/tickets (reset board)")
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM comments")
+    cur.execute("DELETE FROM tickets")
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 @app.delete("/api/tickets/{ticket_id}")
 def api_delete_ticket(ticket_id: int):

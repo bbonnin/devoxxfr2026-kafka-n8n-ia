@@ -6,97 +6,267 @@
   <link rel="stylesheet" type="text/css" href="/static/styles.css">
 </head>
 <body>
-  {% from "_macros.html" import card %}
 
   <header>
-    <strong>Ticket Management</strong> <small>Kanban (TODO → IN_PROGRESS → DONE)</small>
+    <strong>Ticket Management</strong>
+    <small>Kanban</small>
+    <div class="header-actions">
+      <div class="refresh-indicator">
+        <div class="refresh-dot" id="refresh-dot"></div>
+        <span id="refresh-label">Connexion…</span>
+      </div>
+      <button class="btn-zoom" onclick="toggleZoom()" id="btn-zoom">⊕ Grand écran</button>
+      <button class="btn-reset" onclick="resetBoard()">✕ Reset</button>
+    </div>
   </header>
 
   <div class="wrap">
     <div class="col" data-status="TODO" ondragover="allowDrop(event)" ondrop="onDrop(event,'TODO')">
-      <h2>TODO</h2>
-      <div class="lane">
-        {% for t in cols["TODO"] %}
-          {{ card(t) }}
-        {% endfor %}
-      </div>
+      <h2>TODO <span class="col-count" id="count-TODO"></span></h2>
+      <div class="lane" id="lane-TODO"></div>
     </div>
-
     <div class="col" data-status="IN_PROGRESS" ondragover="allowDrop(event)" ondrop="onDrop(event,'IN_PROGRESS')">
-      <h2>IN PROGRESS</h2>
-      <div class="lane">
-        {% for t in cols["IN_PROGRESS"] %}
-          {{ card(t) }}
-        {% endfor %}
-      </div>
+      <h2>IN PROGRESS <span class="col-count" id="count-IN_PROGRESS"></span></h2>
+      <div class="lane" id="lane-IN_PROGRESS"></div>
     </div>
-
+    <div class="col" data-status="IN_TEST" ondragover="allowDrop(event)" ondrop="onDrop(event,'IN_TEST')">
+      <h2>IN TEST <span class="col-count" id="count-IN_TEST"></span></h2>
+      <div class="lane" id="lane-IN_TEST"></div>
+    </div>
     <div class="col" data-status="DONE" ondragover="allowDrop(event)" ondrop="onDrop(event,'DONE')">
-      <h2>DONE</h2>
-      <div class="lane">
-        {% for t in cols["DONE"] %}
-          {{ card(t) }}
-        {% endfor %}
-      </div>
+      <h2>DONE <span class="col-count" id="count-DONE"></span></h2>
+      <div class="lane" id="lane-DONE"></div>
     </div>
+    <div class="col col-cancelled" data-status="CANCELLED" ondragover="allowDrop(event)" ondrop="onDrop(event,'CANCELLED')">
+      <h2>CANCELLED <span class="col-count" id="count-CANCELLED"></span></h2>
+      <div class="lane" id="lane-CANCELLED"></div>
+    </div>
+  </div>
 
-    <div class="drawer">
-      <h3 id="d_title">Select a ticket</h3>
-      <div id="d_meta"></div>
+  <!-- Popup modale -->
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-header">
+        <span id="modal-key" class="modal-key"></span>
+        <h2 id="modal-title"></h2>
+      </div>
+      <div id="modal-pills" class="modal-pills"></div>
+      <div id="modal-rationale" class="modal-rationale" style="display:none"></div>
       <h4>Description</h4>
-      <pre id="d_desc"></pre>
-      <h4>Comments</h4>
-      <div id="d_comments"></div>
+      <pre id="modal-desc"></pre>
+      <div id="modal-comments-section">
+        <h4>Commentaires</h4>
+        <div id="modal-comments"></div>
+      </div>
+      <div class="modal-footer">
+        <label for="modal-status-select">Déplacer vers :</label>
+        <select id="modal-status-select" onchange="moveTicket()">
+          <option value="TODO">TODO</option>
+          <option value="IN_PROGRESS">IN PROGRESS</option>
+          <option value="IN_TEST">IN TEST</option>
+          <option value="DONE">DONE</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+        <button class="btn-delete" onclick="deleteCurrentTicket()">Supprimer</button>
+      </div>
     </div>
   </div>
 
   <script>
-  function allowDrop(ev) { ev.preventDefault() }
+  let knownIds = new Set();
+  let currentTicketId = null;
+  const REFRESH_MS = 3000;
 
-  function onDragStart(ev, ticketId) {
-    ev.dataTransfer.setData("ticketId", ticketId)
+  // ── Carte ──────────────────────────────────────────────────────────────────
+  function renderCard(t, isNew = false) {
+    const div = document.createElement('div');
+    div.className = 'card' + (isNew ? ' card-new' : '');
+    div.draggable = true;
+    div.dataset.id = t.id;
+    div.addEventListener('dragstart', ev => onDragStart(ev, t.id));
+    div.addEventListener('click', () => openModal(t.id));
+    const rationale = t.rationale
+      ? `<div class="card-rationale">🤖 ${escHtml(t.rationale)}</div>`
+      : '';
+    div.innerHTML = `
+      <div><strong>${escHtml(t.key)}</strong> ${escHtml(t.title)}</div>
+      <div class="meta">
+        <span class="pill">${escHtml(t.service)}</span>
+        <span class="pill env-${escHtml(t.env)}">${escHtml(t.env)}</span>
+        <span class="pill sev-${escHtml(t.severity)}">${escHtml(t.severity)}</span>
+        <span class="align-right">
+          <a class="no_decoration" href="#" onclick="event.stopPropagation();confirmDelete(${t.id})">🗑️</a>
+        </span>
+      </div>
+      ${rationale}`;
+    return div;
   }
 
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Refresh ────────────────────────────────────────────────────────────────
+  async function refreshBoard() {
+    let data;
+    try {
+      const r = await fetch('/api/board');
+      if (!r.ok) throw new Error(r.status);
+      data = await r.json();
+    } catch {
+      setIndicator('error');
+      return;
+    }
+    setIndicator('ok');
+ 
+    const statuses = ['TODO','IN_PROGRESS','IN_TEST','DONE','CANCELLED'];
+    const cols = Object.fromEntries(statuses.map(s => [s, []]));
+    Object.assign(cols, data);
+ 
+    // Reconstruire chaque lane proprement
+    statuses.forEach(status => {
+      const lane = document.getElementById(`lane-${status}`);
+      const counter = document.getElementById(`count-${status}`);
+      if (!lane) return;
+      const tickets = cols[status] || [];
+      counter.textContent = tickets.length || '';
+ 
+      // Vider la lane et la reconstruire dans le bon ordre
+      lane.innerHTML = '';
+      tickets.forEach(t => {
+        const isNew = !knownIds.has(t.id);
+        lane.appendChild(renderCard(t, isNew));
+        knownIds.add(t.id);
+      });
+    });
+  }
+
+  function setIndicator(state) {
+    const dot = document.getElementById('refresh-dot');
+    const label = document.getElementById('refresh-label');
+    if (state === 'ok') {
+      dot.style.background = '#00875A';
+      dot.classList.remove('pulse');
+      void dot.offsetWidth;
+      dot.classList.add('pulse');
+      label.textContent = 'Live';
+    } else {
+      dot.style.background = '#DE350B';
+      label.textContent = 'Déconnecté';
+    }
+  }
+
+  // ── Drag & Drop ────────────────────────────────────────────────────────────
+  function allowDrop(ev) { ev.preventDefault(); }
+  function onDragStart(ev, id) { ev.dataTransfer.setData('ticketId', id); }
+
   async function onDrop(ev, status) {
-    ev.preventDefault()
-    const ticketId = ev.dataTransfer.getData("ticketId")
+    ev.preventDefault();
+    const ticketId = ev.dataTransfer.getData('ticketId');
     await fetch(`/api/tickets/${ticketId}`, {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({status})
-    })
-    window.location.reload()
+    });
+    await refreshBoard();
   }
 
-  async function deleteTicket(ticketId) {
-    await fetch(`/api/tickets/${ticketId}`, {
-      method: 'DELETE'
-    })
-    window.location.reload()
+  // ── Suppression ────────────────────────────────────────────────────────────
+  async function confirmDelete(ticketId) {
+    if (!confirm('Supprimer ce ticket ?')) return;
+    await fetch(`/api/tickets/${ticketId}`, {method: 'DELETE'});
+    knownIds.delete(ticketId);
+    await refreshBoard();
   }
 
-  async function showTicket(ticketId) {
-    const r = await fetch(`/api/tickets/${ticketId}`)
-    const data = await r.json()
-    const t = data.ticket
-    document.getElementById('d_title').innerText = `${t.key} - ${t.title}`
-    document.getElementById('d_desc').innerText = t.description
-
-    const meta = [
-      `Service: ${t.service}`,
-      `Env: ${t.env}`,
-      `Severity: ${t.severity}`,
-      `Status: ${t.status}`,
-      `Updated: ${t.updated_at}`
-    ]
-    document.getElementById('d_meta').innerHTML = meta
-      .map(x => `<div class="meta"><span class="pill">${x}</span></div>`).join('')
-
-    const comments = data.comments || []
-    document.getElementById('d_comments').innerHTML = comments.length
-      ? comments.map(c => `<pre><strong>${c.author}</strong> (${c.created_at})\n${c.body}</pre>`).join('')
-      : '<small>No comments</small>'
+  async function deleteCurrentTicket() {
+    if (!currentTicketId) return;
+    if (!confirm('Supprimer ce ticket ?')) return;
+    await fetch(`/api/tickets/${currentTicketId}`, {method: 'DELETE'});
+    knownIds.delete(currentTicketId);
+    closeModal();
+    await refreshBoard();
   }
+
+  async function resetBoard() {
+    if (!confirm('Vider tous les tickets pour la prochaine démo ?')) return;
+    await fetch('/api/tickets', {method: 'DELETE'});
+    knownIds.clear();
+    await refreshBoard();
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  async function openModal(ticketId) {
+    currentTicketId = ticketId;
+    const r = await fetch(`/api/tickets/${ticketId}`);
+    const data = await r.json();
+    const t = data.ticket;
+    const comments = data.comments || [];
+
+    document.getElementById('modal-key').textContent = t.key;
+    document.getElementById('modal-title').textContent = t.title;
+    document.getElementById('modal-desc').textContent = t.description;
+    document.getElementById('modal-status-select').value = t.status;
+
+    const pills = [
+      `<span class="pill env-${escHtml(t.env)}">${escHtml(t.env)}</span>`,
+      `<span class="pill sev-${escHtml(t.severity)}">${escHtml(t.severity)}</span>`,
+      `<span class="pill">${escHtml(t.service)}</span>`,
+      `<span class="pill status-${escHtml(t.status)}">${escHtml(t.status)}</span>`,
+      `<span class="pill">${escHtml(t.updated_at)}</span>`
+    ];
+    document.getElementById('modal-pills').innerHTML = pills.join('');
+
+    const rationaleEl = document.getElementById('modal-rationale');
+    if (t.rationale) {
+      rationaleEl.textContent = '🤖 ' + t.rationale;
+      rationaleEl.style.display = 'block';
+    } else {
+      rationaleEl.style.display = 'none';
+    }
+
+    document.getElementById('modal-comments').innerHTML = comments.length
+      ? comments.map(c =>
+          `<pre><strong>${escHtml(c.author)}</strong> (${escHtml(c.created_at)})\n${escHtml(c.body)}</pre>`
+        ).join('')
+      : '<small>Aucun commentaire</small>';
+
+    document.getElementById('modal-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    currentTicketId = null;
+  }
+
+  async function moveTicket() {
+    if (!currentTicketId) return;
+    const status = document.getElementById('modal-status-select').value;
+    await fetch(`/api/tickets/${currentTicketId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    await refreshBoard();
+  }
+
+  // Fermer avec Escape
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') closeModal();
+  });
+
+  // ── Grand écran ────────────────────────────────────────────────────────────
+  function toggleZoom() {
+    const isLarge = document.body.classList.toggle('large-screen');
+    document.getElementById('btn-zoom').textContent = isLarge ? '⊖ Normal' : '⊕ Grand écran';
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  refreshBoard();
+  setInterval(refreshBoard, REFRESH_MS);
   </script>
 
 </body>
