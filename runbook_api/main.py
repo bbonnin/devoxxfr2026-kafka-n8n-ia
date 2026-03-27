@@ -1,4 +1,4 @@
-from __future__ import annotations
+import logging
 
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
+logger = logging.getLogger("uvicorn.error")
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -66,6 +67,8 @@ def execute_runbook(
     req: RunbookExecuteRequest,
     idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
 ):
+    logger.info("Execute runbook - payload: %s", req.model_dump())
+
     # Optional: if client provides Idempotency-Key, we replay the exact same response
     if idempotency_key and idempotency_key in IDEMPOTENCY_CACHE:
         return IDEMPOTENCY_CACHE[idempotency_key]

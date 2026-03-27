@@ -55,7 +55,9 @@
         128
       ],
       "id": "84f8e30b-2661-4c6b-a0f6-b21220218fb0",
-      "name": "AI Agent"
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -204,9 +206,9 @@
       "parameters": {
         "model": {
           "__rl": true,
-          "value": "claude-sonnet-4-6",
+          "value": "claude-haiku-4-5-20251001",
           "mode": "list",
-          "cachedResultName": "Claude Sonnet 4.6"
+          "cachedResultName": "Claude Haiku 4.5"
         },
         "options": {}
       },
@@ -325,6 +327,10 @@
             {
               "name": "env",
               "value": "={{ $json.env }}"
+            },
+            {
+              "name": "rationale",
+              "value": "={{ $json.rationale }}"
             }
           ]
         },
@@ -469,7 +475,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "82809ddd-b4bd-4033-82d9-9632094972ec",
+  "versionId": "26192fbb-2bf6-4537-8987-40fc5fac8f23",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "8aa28521af542745adc41aef2de81e10fbf2bfc9f1d5688ea62110dfb2ab07b1"

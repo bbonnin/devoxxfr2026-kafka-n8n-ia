@@ -134,7 +134,6 @@ def ticket(ticket_id: int, request: Request):
 
 @app.get("/api/board")
 def api_board():
-    logger.info("GET /api/board")
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM tickets ORDER BY updated_at DESC")
@@ -147,7 +146,7 @@ def api_board():
 
 @app.post("/api/tickets")
 def api_create_ticket(payload: TicketCreate):
-    logger.info("POST /api/tickets - payload: %s", payload.model_dump())
+    logger.info("Create ticket - payload: %s", payload.model_dump())
     conn = db()
     cur = conn.cursor()
 
@@ -168,7 +167,6 @@ def api_create_ticket(payload: TicketCreate):
 
 @app.delete("/api/tickets")
 def api_delete_all_tickets():
-    logger.info("DELETE /api/tickets (reset board)")
     conn = db()
     cur = conn.cursor()
     cur.execute("DELETE FROM comments")
@@ -179,7 +177,6 @@ def api_delete_all_tickets():
 
 @app.delete("/api/tickets/{ticket_id}")
 def api_delete_ticket(ticket_id: int):
-    logger.info("DELETE /api/tickets/%s", ticket_id)
     conn = db()
     cur = conn.cursor()
     cur.execute("DELETE FROM tickets WHERE id=?", (ticket_id,))
@@ -189,7 +186,7 @@ def api_delete_ticket(ticket_id: int):
 
 @app.patch("/api/tickets/{ticket_id}")
 def api_patch_ticket(ticket_id: int, patch: TicketPatch):
-    logger.info("PATCH /api/tickets/%s - payload: %s", ticket_id, patch.model_dump(exclude_none=True))
+    logger.info("Update ticket '%s' - payload: %s", ticket_id, patch.model_dump(exclude_none=True))
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM tickets WHERE id=?", (ticket_id,))
@@ -228,7 +225,6 @@ def api_patch_ticket(ticket_id: int, patch: TicketPatch):
 
 @app.get("/api/tickets/{ticket_id}")
 def api_get_ticket(ticket_id: int):
-    logger.info("GET /api/tickets/%s", ticket_id)
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM tickets WHERE id=?", (ticket_id,))
@@ -244,7 +240,6 @@ def api_get_ticket(ticket_id: int):
 
 @app.post("/api/tickets/{ticket_id}/comment")
 def api_add_comment(ticket_id: int, payload: CommentCreate):
-    logger.info("POST /api/tickets/%s/comment - author: %s, body: %s", ticket_id, payload.author, payload.body)
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT id FROM tickets WHERE id=?", (ticket_id,))
