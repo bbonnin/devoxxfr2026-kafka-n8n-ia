@@ -1,5 +1,5 @@
 {
-  "name": "Demo-Kafka-Agent_IA-Anthropic",
+  "name": "Demo-Kafka-Agent_IA-Anthropic-v0",
   "nodes": [
     {
       "parameters": {
@@ -8,7 +8,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1136,
+        -1232,
         128
       ],
       "id": "f5a97828-d251-414c-8118-b1a505a0c959",
@@ -26,7 +26,7 @@
       "type": "n8n-nodes-base.kafkaTrigger",
       "typeVersion": 1.1,
       "position": [
-        -1360,
+        -1456,
         128
       ],
       "id": "6c7cf0ce-f805-4887-8eec-e4d6f825bb49",
@@ -44,14 +44,14 @@
         "text": "={{ JSON.stringify($json) }}",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "=You are a deterministic SRE Automation Agent.\nYou receive a Kafka event and must decide the best operational response.\nOutput ONLY a raw valid JSON object. No markdown, no preamble, no explanation outside the JSON.\n\n═══════════════════════════════════════\nSTEP 1 — INVESTIGATE (mandatory)\n═══════════════════════════════════════\nALWAYS call these tools in order:\n1. get_service_context(service, env)\n2. get_recent_deployments(service, env)\n3. get_similar_incidents(fingerprint)\n\n═══════════════════════════════════════\nSTEP 2 — DECIDE (strict rules, in order)\n═══════════════════════════════════════\n\nRULE 1 — IGNORE\n  IF get_similar_incidents returns action=IGNORE\n  OR get_service_context.notes contain \"maintenance\"\n  AND event.signals.error_rate < 0.01\n  → decision=IGNORE. STOP.\n\nRULE 2 — TICKET\n  IF event.service == \"payment\"\n  OR event.type == \"slo.burn\"\n  OR event.signals.error_rate > 0.03\n  OR get_similar_incidents returns action=TICKET\n  → decision=TICKET\n  → severity=P0 if event.context.customerTier==\"VIP\" or event.signals.slo_burn > 5\n  → severity=P1 if get_service_context.tier==\"critical\"\n  → severity=P2 otherwise\n  STOP.\n\nRULE 3 — REMEDIATE\n  IF event.type == \"consumer.lag\"\n  AND event.service == \"events-router\"\n  → call execute_remediation(runbook_id=\"scale-consumer\", service=\"events-router\",\n      env=event.env, reason=\"Lag runaway detected\", dry_run=false)\n  → decision=REMEDIATE. STOP.\n\nRULE 4 — ALERT\n  IF anomaly detected but no rule above matched\n  → decision=ALERT. STOP.\n\nRULE 5 — IGNORE (default)\n  → decision=IGNORE.\n\n═══════════════════════════════════════\nSTEP 3 — OUTPUT FORMAT (strict)\n═══════════════════════════════════════\nOutput ONLY a raw valid JSON. \n\nCONDITION: \n- If decision == \"TICKET\", you MUST include the \"ticket_metadata\" object.\n- If decision != \"TICKET\", you MUST OMIT the \"ticket_metadata\" field entirely.\n\nJSON Structure:\n{\n  \"decision\": \"IGNORE|ALERT|TICKET|REMEDIATE\",\n  \"severity\": \"P0|P1|P2|P3\",\n  \"service\": \"<copy event.service>\",\n  \"env\": \"<copy event.env>\",\n  \"event_id\": \"<copy event.eventId>\",\n  \"ticket_metadata\": { \n     \"summary\": \"[SEVERITY] - [SERVICE] - Brief title\",\n     \"description\": \"Markdown report with: 1. Observation 2. Investigation 3. Next steps\"\n  }, \n  \"confidence\": <0.0 to 1.0>,\n  \"tools_used\": [...],\n  \"actions\": [...],\n  \"rationale\": \"<one sentence explanation>\"\n}",
+          "systemMessage": "=You are a deterministic SRE Automation Agent.\nYou receive a Kafka event and must decide the best operational response.\nOutput ONLY a raw valid JSON object. No markdown, no preamble, no explanation outside the JSON.\n\n-----------------------------------------\nSTEP 1 - INVESTIGATE (mandatory)\n-----------------------------------------\nALWAYS call these tools in order:\n1. get_service_context(service, env)\n2. get_recent_deployments(service, env)\n3. get_similar_incidents(fingerprint)\n\n-----------------------------------------\nSTEP 2 - DECIDE (strict rules, in order)\n-----------------------------------------\n\nRULE 1 - IGNORE\n  IF get_similar_incidents returns action=IGNORE\n  OR get_service_context.notes contain \"maintenance\"\n  AND event.signals.error_rate < 0.01\n  -> decision=IGNORE. STOP.\n\nRULE 2 - TICKET\n  IF event.service == \"payment\"\n  OR event.type == \"slo.burn\"\n  OR event.signals.error_rate > 0.03\n  OR get_similar_incidents returns action=TICKET\n  -> decision=TICKET\n  -> severity=P0 if event.context.customerTier==\"VIP\" or event.signals.slo_burn > 5\n  -> severity=P1 if get_service_context.tier==\"critical\"\n  -> severity=P2 otherwise\n  STOP.\n\nRULE 3 - REMEDIATE\n  IF event.type == \"consumer.lag\"\n  AND event.service == \"events-router\"\n  -> call execute_remediation(runbook_id=\"scale-consumer\", service=\"events-router\",\n      env=event.env, reason=\"Lag runaway detected\", dry_run=false)\n  -> decision=REMEDIATE. STOP.\n\nRULE 4 - ALERT\n  IF anomaly detected but no rule above matched\n  -> decision=ALERT. STOP.\n\nRULE 5 - IGNORE (default)\n  -> decision=IGNORE.\n\n-----------------------------------------\nSTEP 3 - OUTPUT FORMAT (strict)\n-----------------------------------------\nOutput ONLY a raw valid JSON. \n\nCONDITION: \n- If decision == \"TICKET\", you MUST include the \"ticket_metadata\" object.\n- If decision != \"TICKET\", you MUST OMIT the \"ticket_metadata\" field entirely.\n\nJSON Structure:\n{\n  \"decision\": \"IGNORE|ALERT|TICKET|REMEDIATE\",\n  \"severity\": \"P0|P1|P2|P3\",\n  \"service\": \"<copy event.service>\",\n  \"env\": \"<copy event.env>\",\n  \"event_id\": \"<copy event.eventId>\",\n  \"ticket_metadata\": { \n     \"summary\": \"[SEVERITY] - [SERVICE] - Brief title\",\n     \"description\": \"Markdown report with: 1. Observation 2. Investigation 3. Next steps\"\n  }, \n  \"confidence\": <0.0 to 1.0>,\n  \"tools_used\": [...],\n  \"actions\": [...],\n  \"rationale\": \"<one sentence explanation>\"\n}",
           "maxIterations": 10
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
       "position": [
-        -912,
+        -928,
         128
       ],
       "id": "84f8e30b-2661-4c6b-a0f6-b21220218fb0",
@@ -191,7 +191,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Log de l'action de remédiation\nconst d = $json;\nconsole.log(`[REMEDIATE] ${d.service}/${d.env} → ${d.actions.join(', ')} | ${d.rationale}`);\nreturn $input.all();"
+        "jsCode": "// Log de l'action de remédiation\nconst d = $json;\nconsole.log(`[REMEDIATE] ${d.service}/${d.env} -> ${d.actions.join(', ')} | ${d.rationale}`);\nreturn $input.all();"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -215,8 +215,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
       "position": [
-        -1040,
-        368
+        -1024,
+        352
       ],
       "id": "885dd2c9-f1de-4979-a5b3-9c1d3f3f069a",
       "name": "Anthropic Chat Model",
@@ -236,7 +236,7 @@
       "typeVersion": 1.5,
       "position": [
         -848,
-        368
+        400
       ],
       "id": "b7386d96-62ae-4b83-8fed-2caad842b056",
       "name": "Redis (mémoire)",
@@ -256,8 +256,8 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1.2,
       "position": [
-        -656,
-        368
+        -704,
+        352
       ],
       "id": "c44b961a-4243-45a4-aa7f-0b4a6832c38e",
       "name": "Tools OPS (via MCP)"
@@ -269,7 +269,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -544,
+        -512,
         128
       ],
       "id": "369d3bdc-4f58-4912-b93e-8780cd04a4a4",
@@ -278,7 +278,7 @@
     {
       "parameters": {
         "channelId": "aks14u8bebf8dkrpgiwhpcqg7a",
-        "message": "=### :rotating_light: [{{ $('Création ticket').item.json.severity }}] {{ $('Création ticket').item.json.service }} — {{ $('Création ticket').item.json.env }}\n**Décision** : `{{ $('Switch DECISION').item.json.decision }}`  |  **Confiance** : {{ $('Switch DECISION').item.json.confidence }}\n**Raison** : {{ $('Switch DECISION').item.json.rationale }}\n{{ $('Switch DECISION').item.json.decision === 'TICKET' ? '**Ticket** : http://localhost:7001/' + $('Création ticket').item.json.id : '' }}\n**Outils** : {{ $('Switch DECISION').item.json.tools_used.join(', ') }}\n> *Event ID : {{ $('Switch DECISION').item.json.event_id }}*",
+        "message": "=### :rotating_light: [{{ $('Création ticket').item.json.severity }}] {{ $('Création ticket').item.json.service }} - {{ $('Création ticket').item.json.env }}\n**Décision** : `{{ $('Switch DECISION').item.json.decision }}`  |  **Confiance** : {{ $('Switch DECISION').item.json.confidence }}\n**Raison** : {{ $('Switch DECISION').item.json.rationale }}\n{{ $('Switch DECISION').item.json.decision === 'TICKET' ? '**Ticket** : http://localhost:7001/' + $('Création ticket').item.json.id : '' }}\n**Outils** : {{ $('Switch DECISION').item.json.tools_used.join(', ') }}\n> *Event ID : {{ $('Switch DECISION').item.json.event_id }}*",
         "attachments": [],
         "otherOptions": {}
       },
@@ -344,6 +344,50 @@
       ],
       "id": "26735aa3-fe11-4428-9bad-d91722565654",
       "name": "Création ticket"
+    },
+    {
+      "parameters": {
+        "content": "## Lecture des messages dans KAFKA\n",
+        "height": 720
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        -160
+      ],
+      "id": "69be0ba6-165c-4249-9e03-dab55f9161a3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Agent (avec ses tools)\n\n",
+        "height": 720,
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        -160
+      ],
+      "id": "bd2ae4f2-1965-485a-af77-6fabf41ce5fc",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Actions (réalisées selon les décisions de l'agent)\n\n",
+        "height": 720,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -160
+      ],
+      "id": "a6710ede-2eb5-452c-a532-977d91f966d9",
+      "name": "Sticky Note2"
     }
   ],
   "pinData": {},
@@ -467,6 +511,11 @@
           }
         ]
       ]
+    },
+    "Trash": {
+      "main": [
+        []
+      ]
     }
   },
   "active": false,
@@ -475,7 +524,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "26192fbb-2bf6-4537-8987-40fc5fac8f23",
+  "versionId": "05afdc22-ce89-4caa-a55e-dac50bbb1beb",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "8aa28521af542745adc41aef2de81e10fbf2bfc9f1d5688ea62110dfb2ab07b1"

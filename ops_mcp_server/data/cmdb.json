@@ -4,20 +4,20 @@
     "tier": "critical",
     "slo": "99.9%",
     "runbook_scale": "scale-consumer",
-    "notes": "VIP impact possible. Toute erreur applicative post-déploiement doit déclencher un ticket P1 minimum."
+    "notes": "VIP impact possible. Any application error post-deployment must trigger a P1 ticket minimum."
   },
   "catalog:prod": {
     "owner": "team-catalog",
     "tier": "important",
     "slo": "99.5%",
     "runbook_scale": "scale-consumer",
-    "notes": "Search timeouts are often noise. Maintenance planifiée chaque mardi 02h-04h UTC — les service.down dans cette fenêtre sont attendus et doivent être ignorés."
+    "notes": "Search timeouts are often noise. Scheduled maintenance every Tuesday 02h-04h UTC - service.down events in this window are expected and must be ignored."
   },
   "events-router:prod": {
     "owner": "team-platform",
     "tier": "critical",
     "slo": "99.9%",
     "runbook_scale": "scale-consumer",
-    "notes": "Consumer lag remediation allowed via runbook 'scale-consumer'. Seuil d'alerte : lag > 100 000 messages."
+    "notes": "Consumer lag remediation allowed via runbook 'scale-consumer'. Alert threshold: lag > 100,000 messages."
   }
 }

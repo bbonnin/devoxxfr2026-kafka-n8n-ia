@@ -59,7 +59,7 @@ SCENARIOS = {
             "env": "prod",
             "signals": {"status": "unreachable", "ping_loss": "100%"},
             "message": "Catalog API heartbeat failed" # "Connection refused on port 443"
-            # L'IA devra découvrir via le MCP server que c'est une maintenance prévue.
+            # The AI must discover via MCP server that this is a scheduled maintenance.
         },
         "label": f"{YELLOW}Maintenance (Catalog){RESET}"
     },
@@ -72,8 +72,8 @@ SCENARIOS = {
             "env": "prod",
             "signals": {"error_rate": 0.05},
             "message": "NullPointerException in ProductController"
-            # L'IA verra via 'get_recent_investigation_data' qu'un déploiement a eu lieu il y a 5 min.
-            # Décision : Suggérer un rollback ou alerter l'auteur du commit.
+            # The AI will see via 'get_recent_investigation_data' that a deployment occurred < 5 min ago.
+            # Expected decision: suggest rollback or alert the commit author.
         },
         "label": f"{RED}Regression Post-Deploy (Payment){RESET}"
     },
@@ -117,7 +117,7 @@ def cmd_demo_sequence(args):
 
 def cmd_replay(args):
     if args.template not in SCENARIOS:
-        print(f"{RED}Erreur : Template '{args.template}' inconnu.{RESET}")
+        print(f"{RED}Error: unknown template '{args.template}'.{RESET}")
         return
     scenario = SCENARIOS[args.template]
     send(args.producer, args.topic, scenario["func"](), f"Replay: {args.template}", force_id=args.event_id)
@@ -136,7 +136,7 @@ def main():
 
     p_rep = sub.add_parser("replay", help="Replay an event with a specific ID")
     p_rep.add_argument("--template", choices=list(SCENARIOS.keys()), required=True)
-    p_rep.add_argument("--event-id", required=True, help="L'ID original à simuler")
+    p_rep.add_argument("--event-id", required=True, help="Original event ID to replay")
     p_rep.set_defaults(fn=cmd_replay)
 
     for key in SCENARIOS.keys():

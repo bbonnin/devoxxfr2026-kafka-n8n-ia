@@ -93,9 +93,9 @@ services:
     volumes:
       - tickets-data:/data
 
-  runbook-api:
-    build: ./runbook_api
-    container_name: runbook-api
+  ops-controller:
+    build: ./ops_controller
+    container_name: ops-controller
     ports:
       - "7003:7003"
 
@@ -105,8 +105,7 @@ services:
     ports:
       - "7002:7002"
     environment:
-      - TICKET_API_BASE=http://ticket-management:7001
-      - RUNBOOK_API_BASE=http://runbook-api:7003
+      - OPS_CONTROLLER_BASE=http://ops-controller:7003
 
 volumes:
   kafka-data:

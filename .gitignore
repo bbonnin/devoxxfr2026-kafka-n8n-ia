@@ -1,6 +1,7 @@
 *.docx
 *.pptx
 notes-perso.md
+.claude/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

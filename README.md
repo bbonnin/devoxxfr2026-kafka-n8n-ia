@@ -71,3 +71,16 @@ Utilisation d'un bot:
 * Aller dans Integrations
 * Créer sur "Create new token" du bot 
 * Ne pas oublier d'ajouter le bot à la team (System Console > Teams) ou directement sur le channel ?
+
+
+## Scénarios de démo
+
+| Scénario | Type | Décision de l'agent | Résultat |
+|----------|------|---------------------|----------|
+| Catalog timeout | bruit | IGNORE | Pas de ticket (faux positif évité) |
+| Catalog maintenance | planifiée | IGNORE | Pas de ticket (contexte reconnu) |
+| Régression Payment | post-déploiement | TICKET P1 | Escalade par criticité + déploiement récent |
+| SLO burn Payment | critique | TICKET P0 | Escalade maximale VIP |
+| Lag events-router | auto-remédiation | REMEDIATE | Runbook scale-consumer exécuté |
+
+> Chaque scénario a sa commande correspondante dans eventgen.py.
