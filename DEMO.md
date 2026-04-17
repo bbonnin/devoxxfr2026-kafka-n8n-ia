@@ -53,7 +53,7 @@ python eventgen.py lag          # Events-router lag -> REMEDIATE (auto-heal)
 - Event: `type=app.error, service=payment, error_rate=5%`
 - MCP investigation:
   - `get_service_context(payment)` -> tier=critical, "VIP impact possible"
-  - `get_recent_investigation_data(payment)` -> déploiement v1.42.0 il y a 5 min
+  - `get_recent_deployments(payment)` -> déploiement v1.42.0 il y a 5 min
   - `fetch_service_logs(payment)` -> "Stripe API returned 500", "Circuit breaker opened"
 - **Decision: TICKET P1** (critical tier + recent deploy)
 - **Ce qu'on voit**:

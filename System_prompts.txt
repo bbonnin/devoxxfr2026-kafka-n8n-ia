@@ -95,7 +95,7 @@ STEP 1 - INVESTIGATE (mandatory, in order)
 ═══════════════════════════════════════
 ALWAYS call these tools:
 1. get_service_context(service, env) - Get tier, owner, SLO, notes
-2. get_recent_investigation_data(service, env) - Get deployments & known issues
+2. get_recent_deployments(service, env) - Get deployments & known issues
 3. get_similar_incidents(fingerprint) - Get similar past incidents & action
 
 Optional (if needed for context):

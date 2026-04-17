@@ -72,7 +72,7 @@ SCENARIOS = {
             "env": "prod",
             "signals": {"error_rate": 0.05},
             "message": "NullPointerException in ProductController"
-            # The AI will see via 'get_recent_investigation_data' that a deployment occurred < 5 min ago.
+            # The AI will see via 'get_recent_deployments' that a deployment occurred < 5 min ago.
             # Expected decision: suggest rollback or alert the commit author.
         },
         "label": f"{RED}Regression Post-Deploy (Payment){RESET}"

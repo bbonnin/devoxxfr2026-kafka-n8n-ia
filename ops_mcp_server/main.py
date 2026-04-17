@@ -4,9 +4,10 @@ ops-mcp-server - MCP server exposing OPS tools (calls to ops-controller API).
 import json
 import os
 import logging
+
 from pathlib import Path
 from typing import Any, Optional, List
-
+from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, Field
 
 import httpx
@@ -15,8 +16,11 @@ from mcp.server.fastmcp import FastMCP
 
 DATA_DIR = Path(__file__).parent / "data"
 CMDB = json.loads((DATA_DIR / "cmdb.json").read_text(encoding="utf-8"))
-DEPLOYMENTS = json.loads((DATA_DIR / "deployments.json").read_text(encoding="utf-8"))
 INCIDENTS = json.loads((DATA_DIR / "incidents.json").read_text(encoding="utf-8"))
+DEPLOYMENTS = json.loads((DATA_DIR / "deployments.json").read_text(encoding="utf-8"))
+for d in DEPLOYMENTS:
+    if d["service"] == "payment":
+        d["when"] = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(timespec="seconds")
 
 OPS_CONTROLLER_BASE = os.getenv("OPS_CONTROLLER_BASE", "http://ops-controller:7003")
 
@@ -55,7 +59,7 @@ def get_service_context(service: str, env: str = "prod") -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_recent_investigation_data(service: str, env: str = "prod") -> dict[str, Any]:
+def get_recent_deployments(service: str, env: str = "prod") -> dict[str, Any]:
     """
     Fetch recent deployments and similar past incidents.
     Use this to correlate a spike of errors with a recent change.
