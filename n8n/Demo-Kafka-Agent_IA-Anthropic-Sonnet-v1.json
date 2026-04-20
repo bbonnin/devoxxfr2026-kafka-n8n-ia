@@ -1,0 +1,701 @@
+{
+  "name": "Demo-Kafka-Agent_IA-Anthropic-Sonnet-v1",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// On 'normalise' les messages\nconst normalizedMsgs = []\nfor (const item of $input.all()) {\n  const event = item.json.message\n  const endpoint = event?.context?.endpoint || \"\"\n  const fingerprint = [\n    event.service, \n    event.env, \n    event.type, \n    endpoint].filter(Boolean).join(\":\")\n  normalizedMsgs.push({ event, fingerprint})\n}\n\nreturn normalizedMsgs"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        224
+      ],
+      "id": "d5b246d7-ce03-4b32-842e-88ab766c33db",
+      "name": "Normalisation événement"
+    },
+    {
+      "parameters": {
+        "topic": "events.all",
+        "groupId": "n8n-kafka",
+        "options": {
+          "fromBeginning": false,
+          "jsonParseMessage": true
+        }
+      },
+      "type": "n8n-nodes-base.kafkaTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        224
+      ],
+      "id": "a9b2633f-de3c-497a-b7cc-150388392ebc",
+      "name": "Lecture Kafka",
+      "credentials": {
+        "kafka": {
+          "id": "UHCNdzIoayQGa7hd",
+          "name": "Kafka account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an expert SRE Automation Agent.\nYou receive a Kafka event and must determine the best operational response.\nOutput ONLY a raw valid JSON object. No markdown, no preamble, no explanation outside the JSON.\n\n-----------------------------------------\nSTEP 1 - INVESTIGATE (mandatory)\n-----------------------------------------\nAlways build context before deciding. Call tools in this order:\n1. get_service_context(service, env)\n   → business criticality, SLO, owner, operational notes\n2. get_recent_investigation_data(service, env)\n   → recent deployments, known issues\n3. get_similar_incidents(fingerprint)\n   → past incidents with same signature, recommended action\n\nIf logs would help confirm the root cause:\n4. fetch_service_logs(service)  [optional]\n\n-----------------------------------------\nSTEP 2 - DECIDE\n-----------------------------------------\nBased solely on your investigation results, determine the best response.\n\nThe `action` field returned by get_similar_incidents is your strongest signal —\nit encodes the team's accumulated operational knowledge.\nService notes and recent deployments provide essential context.\nSynthesize all signals to reach a grounded, explainable decision.\n\nAvailable decisions:\n- IGNORE    : event is noise or expected (maintenance window, known pattern)\n- TICKET    : human attention required — create a ticket with full context\n- REMEDIATE : an automated fix is safe and authorized — execute it\n- ALERT     : anomaly detected but no automated action is available\n\nFor TICKET, assess severity from the evidence:\n- P0 if VIP customers are impacted or SLO burn is critical\n- P1 if the service is business-critical and impact is confirmed\n- P2 for lower-urgency issues\n\nFor REMEDIATE: only call execute_remediation if the investigation results\n(similar incidents or service notes) explicitly authorize automated action\nfor this service and runbook.\n\n-----------------------------------------\nSTEP 3 - OUTPUT FORMAT (strict)\n-----------------------------------------\nOutput ONLY a raw valid JSON.\n\nCONDITION:\n- If decision == \"TICKET\", you MUST include the \"ticket_metadata\" object.\n- If decision != \"TICKET\", you MUST OMIT the \"ticket_metadata\" field entirely.\n\n{\n  \"decision\": \"IGNORE|ALERT|TICKET|REMEDIATE\",\n  \"severity\": \"P0|P1|P2|P3\",\n  \"service\": \"<copy event.service>\",\n  \"env\": \"<copy event.env>\",\n  \"event_id\": \"<copy event.eventId>\",\n  \"ticket_metadata\": {\n     \"summary\": \"[SEVERITY] - [SERVICE] - Brief title\",\n     \"description\": \"Markdown: 1. Observation 2. Investigation findings 3. Next steps\"\n  },\n  \"confidence\": <0.0 to 1.0>,\n  \"tools_used\": [...],\n  \"actions\": [...],\n  \"rationale\": \"<one sentence grounded in investigation results>\"\n}",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        592,
+        224
+      ],
+      "id": "25d52bb6-d36c-4604-b4cb-39e94625c816",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5609fe60-dbb7-4c88-825a-4d8af2f97fe3",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "TICKET",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "TICKET"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0744385f-b414-4500-a039-be455751e16d",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "ALERT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ALERT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d685ef94-5d77-4fc1-bb8b-0cfe16a44219",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "IGNORE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IGNORE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d4d6d68c-c27a-493d-8fd0-2327d27acf99",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "REMEDIATE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "REMEDIATE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        192
+      ],
+      "id": "1f58647e-0c84-48f2-babb-c4c41d127433",
+      "name": "Switch DECISION"
+    },
+    {
+      "parameters": {
+        "channelId": "t87suww55fbodc4ry3st7pu8zc",
+        "message": "=### :mute: [IGNORE] {{ $json.service }} - {{ $json.env }}\n**Raison** : {{ $json.rationale }}\n**Confiance** : {{ $json.confidence }} | **Outils** : {{ $json.tools_used.join(', ') }}\n> *Event ID : {{ $json.event_id }}*",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.mattermost",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        368
+      ],
+      "id": "d8ea2f4b-5734-4b31-947a-86c85a8db63c",
+      "name": "Trace IGNORE",
+      "credentials": {
+        "mattermostApi": {
+          "id": "A179wFI7KpAKjnO8",
+          "name": "Mattermost account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        448
+      ],
+      "id": "439edacc-181d-49dd-9bcb-52ab03745881",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "W144CQPcB2vMRlwg",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.event.eventId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        496
+      ],
+      "id": "61619a7e-04ca-4aea-80d0-9bae4976c7f9",
+      "name": "Redis (mémoire)",
+      "credentials": {
+        "redis": {
+          "id": "tWiHNsjeIQ80bRkE",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://ops-mcp-server:7002/mcp",
+        "include": "selected",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        448
+      ],
+      "id": "a433505a-d252-4017-8884-2e9f9a0996a9",
+      "name": "Tools OPS (via MCP)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output ?? $json.text ?? \"\";\nlet parsed;\ntry {\n  const clean = raw.replace(/^```json\\s*/i, \"\").replace(/```\\s*$/, \"\").trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  // Fallback : extraire le JSON du texte si le LLM a ajouté du texte autour\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error(\"No JSON found in LLM output: \" + raw.substring(0, 200));\n  parsed = JSON.parse(match[0]);\n}\n\n// Valeurs critiques toujours surchargées depuis l'événement source\nconst src = $('Normalisation événement').first().json.event;\nparsed.service = src.service;\nparsed.env     = src.env;\n\n// Valeurs par défaut si le LLM a oublié un champ\nparsed.decision   = (parsed.decision   || \"IGNORE\").toUpperCase();\nparsed.severity   = (parsed.severity   || \"P3\").toUpperCase();\nparsed.confidence = parsed.confidence  ?? 0.5;\nparsed.tools_used = parsed.tools_used  || [];\nparsed.actions    = (parsed.actions || []).map(a => {\n  if (typeof a === 'string') return a;\n  if (a && typeof a === 'object')\n    return a.runbook_id || a.name || a.action || a.tool || a.description || JSON.stringify(a);\n  return String(a);\n});\nparsed.rationale  = parsed.rationale || \"No rationale provided\";\n\n// Valider que decision est dans les valeurs attendues\nconst VALID = [\"IGNORE\", \"ALERT\", \"TICKET\", \"REMEDIATE\"];\nif (!VALID.includes(parsed.decision)) parsed.decision = \"ALERT\";\n\nreturn [{ json: parsed }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        224
+      ],
+      "id": "83b8e159-7dc4-4e01-81d0-646c752cb20a",
+      "name": "Enrichissement sortie"
+    },
+    {
+      "parameters": {
+        "channelId": "aks14u8bebf8dkrpgiwhpcqg7a",
+        "message": "=### :rotating_light: [{{ $json.severity }}] {{ $json.service }} - {{ $json.env }}\n**Décision** : `TICKET`\n**Confiance** : {{ $('Switch DECISION').item.json.confidence }}\n**Raison** : {{ $('Switch DECISION').item.json.rationale }}\n**Ticket** : http://localhost:7001/{{ $json.id }}\n**Outils** : {{ $('Switch DECISION').item.json.tools_used.join(', ') }}\n> *Event ID : {{ $('Switch DECISION').item.json.event_id }}*",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.mattermost",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        0
+      ],
+      "id": "9008b865-0818-4d99-ae22-bc97e7fcdcca",
+      "name": "Notification TICKET",
+      "credentials": {
+        "mattermostApi": {
+          "id": "A179wFI7KpAKjnO8",
+          "name": "Mattermost account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channelId": "aks14u8bebf8dkrpgiwhpcqg7a",
+        "message": "=### :warning: [ALERT] {{ $json.service }} - {{ $json.env }}\n**Confiance** : {{ $json.confidence }}\n**Raison** : {{ $json.rationale }}\n**Outils** : {{ $json.tools_used.join(', ') }}\n> *Event ID : {{ $json.event_id }}*",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.mattermost",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        176
+      ],
+      "id": "d382521e-a5cc-486d-a665-f6993aa7080a",
+      "name": "Notification ALERT",
+      "credentials": {
+        "mattermostApi": {
+          "id": "A179wFI7KpAKjnO8",
+          "name": "Mattermost account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ticket-management:7001/api/tickets",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.ticket_metadata.summary }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.ticket_metadata.description }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity }}"
+            },
+            {
+              "name": "event_id",
+              "value": "={{ $json.event_id }}"
+            },
+            {
+              "name": "service",
+              "value": "={{ $json.service }}"
+            },
+            {
+              "name": "env",
+              "value": "={{ $json.env }}"
+            },
+            {
+              "name": "rationale",
+              "value": "={{ $json.rationale }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "a24292d7-edc8-409d-a7fd-4f866610be07",
+      "name": "Création ticket"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'http://ticket-management:7001/api/tickets/' + $json.id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "DONE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1648,
+        544
+      ],
+      "id": "d2803170-074d-4f7c-9126-bd95f4b16c98",
+      "name": "Ticket → DONE"
+    },
+    {
+      "parameters": {
+        "content": "## Lecture des messages dans KAFKA\n",
+        "height": 720
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -64
+      ],
+      "id": "fc4e772c-034d-4554-af8f-b5ecf7879e65",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Agent (avec ses tools)\n\n",
+        "height": 720,
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -64
+      ],
+      "id": "b9b56606-d3b8-470b-b877-2ef085b6e7ab",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Actions (réalisées selon les décisions de l'agent)\n\n",
+        "height": 784,
+        "width": 1104
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        -64
+      ],
+      "id": "405e3bc0-a9e1-4a5a-bb4b-d71c16b862fd",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ticket-management:7001/api/tickets",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ '[AUTO] ' + $json.service + ' - ' + $json.rationale }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ '**Auto-remédiation exécutée automatiquement par l\\'agent IA.**\\n\\n**Actions** : ' + ($json.actions || []).join(', ') + '\\n\\n**Raison** : ' + $json.rationale + '\\n\\n**Confiance** : ' + $json.confidence + '\\n\\n**Outils utilisés** : ' + ($json.tools_used || []).join(', ') }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity || 'P2' }}"
+            },
+            {
+              "name": "event_id",
+              "value": "={{ $json.event_id }}"
+            },
+            {
+              "name": "service",
+              "value": "={{ $json.service }}"
+            },
+            {
+              "name": "env",
+              "value": "={{ $json.env }}"
+            },
+            {
+              "name": "rationale",
+              "value": "={{ $json.rationale }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1456,
+        544
+      ],
+      "id": "c3f50180-92be-452a-bd60-ace7306bef85",
+      "name": "Création ticket pour tracer"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://ticket-management:7001/api/tickets/' + $json.id + '/comment' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "author",
+              "value": "n8n-agent"
+            },
+            {
+              "name": "body",
+              "value": "={{ 'Closed automatically by n8n agent.\\n\\n**Runbook** : ' + $('Switch DECISION').item.json.actions.join(', ') + '\\n**Rationale** : ' + $('Switch DECISION').item.json.rationale + '\\n**Confidence** : ' + $('Switch DECISION').item.json.confidence + '\\n\\n*No human intervention required.*' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1840,
+        544
+      ],
+      "id": "70699c2e-62bf-459a-af17-6d47c03708e0",
+      "name": "Ajout commentaire \"fermeture auto\""
+    },
+    {
+      "parameters": {
+        "channelId": "aks14u8bebf8dkrpgiwhpcqg7a",
+        "message": "=### :wrench: [REMEDIATE] {{ $('Switch DECISION').item.json.service }} - {{ $('Switch DECISION').item.json.env }}\n**Runbook exécuté automatiquement**  |  **Confiance** : {{ $('Switch DECISION').item.json.confidence }}\n**Raison** : {{ $('Switch DECISION').item.json.rationale }}\n**Actions** : {{ $('Switch DECISION').item.json.actions.join(', ') }}\n**Ticket** : http://localhost:7001/{{ $('Création ticket pour tracer').item.json.id }} *(DONE - change record automatique)*\n**Outils** : {{ $('Switch DECISION').item.json.tools_used.join(', ') }}\n> *Event ID : {{ $('Switch DECISION').item.json.event_id }}*",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.mattermost",
+      "typeVersion": 1,
+      "position": [
+        2048,
+        544
+      ],
+      "id": "182dfb94-98e4-46ae-a327-d0747867c8e1",
+      "name": "Notification REMEDIATION",
+      "credentials": {
+        "mattermostApi": {
+          "id": "A179wFI7KpAKjnO8",
+          "name": "Mattermost account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lecture Kafka": {
+      "main": [
+        [
+          {
+            "node": "Normalisation événement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalisation événement": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Enrichissement sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch DECISION": {
+      "main": [
+        [
+          {
+            "node": "Création ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notification ALERT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trace IGNORE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Création ticket pour tracer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis (mémoire)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tools OPS (via MCP)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrichissement sortie": {
+      "main": [
+        [
+          {
+            "node": "Switch DECISION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket → DONE": {
+      "main": [
+        [
+          {
+            "node": "Ajout commentaire \"fermeture auto\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Création ticket": {
+      "main": [
+        [
+          {
+            "node": "Notification TICKET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Création ticket pour tracer": {
+      "main": [
+        [
+          {
+            "node": "Ticket → DONE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajout commentaire \"fermeture auto\"": {
+      "main": [
+        [
+          {
+            "node": "Notification REMEDIATION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7ad803de-d2c8-4ccc-b604-c62281bc9e59",
+  "meta": {
+    "instanceId": "8aa28521af542745adc41aef2de81e10fbf2bfc9f1d5688ea62110dfb2ab07b1"
+  },
+  "id": "PY1t7lkFs6FU0XaS",
+  "tags": []
+}

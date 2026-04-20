@@ -1,6 +1,6 @@
 # Demo
 
-## Scénarios à montrer (5 x 2min = 10min)
+## Scénarios à montrer 
 
 Chaque événement Kafka est traité par l'agent IA qui :
 1. Appelle les tools MCP (investigation)
