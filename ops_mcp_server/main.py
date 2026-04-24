@@ -84,7 +84,7 @@ def fetch_service_logs(service: str, lines: int = 5) -> dict[str, Any]:
             "ERROR: Stripe API returned 500 - retrying (attempt 2/3)...",
             "ERROR: 3 consecutive timeouts in checkout_v2 handler",
             "WARN: Circuit breaker for payment-gateway opened, fallback mode enabled",
-            "DEBUG: Last successful transaction: 2026-02-17T14:39:15Z",
+            "DEBUG: Last successful transaction: 2026-04-23T17:04:15Z",
             "ERROR: Insufficient balance check failed, reverting transaction",
         ],
         "catalog": [
@@ -224,7 +224,7 @@ def request_human_intervention(service: str, reason: str, priority: str = "P2") 
     It will create a high-priority notification for the on-call engineer.
     """
 
-    return f"SUCCESS: On-call engineer for {service} has been notified via Mattermost/PagerDuty. Reason: {reason}"
+    return f"On-call engineer for {service} must been notified. Reason: {reason}"
 
 
 def main():

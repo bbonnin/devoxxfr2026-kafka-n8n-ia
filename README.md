@@ -83,8 +83,9 @@ python eventgen.py replay --template incident-vip --event-id 11111111-1111-1111-
 
 Utilisation d'un bot:
 * Aller dans la system console
-* Créer un bot 
+* Créer un bot (http://localhost:8065/demo/integrations/bots)
 * Retourner sur la page utilisateur (admin)
-* Aller dans Integrations
-* Créer sur "Create new token" du bot 
-* Ne pas oublier d'ajouter le bot à la team (System Console > Teams) ou directement sur le channel ?
+* Aller dans Integrations (http://localhost:8065/demo/integrations)
+* Créer sur "Create new token" du bot et récupérer l'access token pour le mettre dans n8n
+* Ne pas oublier d'ajouter le bot à la team (System Console > Teams, http://localhost:8065/admin_console/user_management/teams) ou directement sur le channel 
+* Récupérer les identifiants des channels dans mattermost (icone (i)) pour mettre ces id dans n8n (Channel ID / Expression)
